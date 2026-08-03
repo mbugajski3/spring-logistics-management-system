@@ -2,6 +2,9 @@ package com.mbugajski.logistics.customer;
 
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Optional;
+
 @Service
 public class CustomerService {
 
@@ -23,5 +26,24 @@ public class CustomerService {
         }
 
         return customerRepository.create(customer);
+    }
+
+    public Customer findById(long customerId) {
+        Optional<Customer> foundCustomer = customerRepository.findById(customerId);
+
+        if (foundCustomer.isEmpty()) {
+            throw new CustomerNotFoundException(customerId);
+        }
+
+        return foundCustomer.get();
+    }
+
+    public void deleteById(long customerId) {
+        findById(customerId);
+        customerRepository.deleteById(customerId);
+    }
+
+    public List<Customer> findAll() {
+        return customerRepository.findAll();
     }
 }
