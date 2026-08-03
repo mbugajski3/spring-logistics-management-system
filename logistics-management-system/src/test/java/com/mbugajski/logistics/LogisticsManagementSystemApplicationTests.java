@@ -1,4 +1,4 @@
-package com.mbugajski.logistics_management_system;
+package com.mbugajski.logistics;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
