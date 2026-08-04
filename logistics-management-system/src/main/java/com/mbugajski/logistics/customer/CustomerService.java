@@ -14,18 +14,32 @@ public class CustomerService {
         this.customerRepository = customerRepository;
     }
 
-    public Customer create(Customer customer) {
-        if (customer == null) {
+    public Customer create(CreateCustomerRequest customerRequest) {
+        if (customerRequest == null) {
             throw new IllegalArgumentException("Customer cannot be null.");
         }
 
-        String customerEmail = customer.getEmail();
+        String email = customerRequest.getEmail();
 
-        if (customerRepository.existsByEmail(customerEmail)) {
+        if (customerRepository.existsByEmail(email)) {
             throw new IllegalArgumentException("Customer with this email already exists.");
         }
 
-        return customerRepository.create(customer);
+        String firstName = customerRequest.getFirstName();
+        String lastName = customerRequest.getLastName();
+        String phoneNumber = customerRequest.getPhoneNumber();
+
+        CreateAddressRequest addressRequest = customerRequest.getAddress();
+        String street = addressRequest.getStreet();
+        String buildingNumber = addressRequest.getBuildingNumber();
+        String apartmentNumber = addressRequest.getApartmentNumber();
+        String city = addressRequest.getCity();
+        String postalCode = addressRequest.getPostalCode();
+        String country = addressRequest.getCountry();
+
+        Address createdAddress = new Address(street, buildingNumber, apartmentNumber, city, postalCode, country);
+
+        return customerRepository.create(firstName, lastName, email, phoneNumber, createdAddress);
     }
 
     public Customer findById(long customerId) {

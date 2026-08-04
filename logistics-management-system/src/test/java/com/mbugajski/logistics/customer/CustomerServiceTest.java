@@ -1,89 +1,88 @@
 package com.mbugajski.logistics.customer;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.List;
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 public class CustomerServiceTest {
 
+    private CustomerRepository testRepository;
+    private CustomerService testService;
+
+    @BeforeEach
+    void setUp() {
+        testRepository = new CustomerRepository();
+        testService = new CustomerService(testRepository);
+    }
+
     @Test
     void shouldCreateCustomer() {
-        CustomerRepository testRepository = new CustomerRepository();
-        CustomerService testService = new CustomerService(testRepository);
-        Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer1 = new Customer(1L, "Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+        CreateAddressRequest addressRequest = createValidAddressRequest();
+        CreateCustomerRequest customerRequest = createCustomerRequest("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299");
+        customerRequest.setAddress(addressRequest);
 
-        Customer createdCustomer = testService.create(customer1);
+        Customer createdCustomer = testService.create(customerRequest);
         List<Customer> foundCustomers = testRepository.findAll();
 
-        assertSame(customer1, createdCustomer);
+        assertEquals(1L, createdCustomer.getId());
+        assertEquals(customerRequest.getFirstName(), createdCustomer.getFirstName());
+        assertEquals(addressRequest.getStreet(), createdCustomer.getAddress().getStreet());
         assertTrue(foundCustomers.contains(createdCustomer));
     }
 
     @Test
     void shouldRejectCustomerWithExistingEmail() {
-        CustomerRepository testRepository = new CustomerRepository();
-        CustomerService testService = new CustomerService(testRepository);
-        Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer1 = new Customer(1L, "Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
-        Customer customer2 = new Customer(2L, "Franciszek", "Cyprian", "ADRIAN@NOWAK.COM", "+48 777 222 333", address);
+        CreateAddressRequest addressRequest = createValidAddressRequest();
+        CreateCustomerRequest customerRequest1 = createCustomerRequest("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299");
+        CreateCustomerRequest customerRequest2 = createCustomerRequest("Franciszek", "Cyprian", "  ADRIAN@NOWAK.COM  ", "+48 777 222 333");
 
-        testService.create(customer1);
+        customerRequest1.setAddress(addressRequest);
+        customerRequest2.setAddress(addressRequest);
 
-        assertThrows(IllegalArgumentException.class, () -> testService.create(customer2));
+        testService.create(customerRequest1);
+
+        assertThrows(IllegalArgumentException.class, () -> testService.create(customerRequest2));
         assertEquals(1, testRepository.findAll().size());
     }
 
     @Test
     void shouldRejectNullCustomer() {
-        CustomerRepository testRepository = new CustomerRepository();
-        CustomerService testService = new CustomerService(testRepository);
-
         assertThrows(IllegalArgumentException.class, () -> testService.create(null));
     }
 
     @Test
     void shouldFindCustomerById() {
-        CustomerRepository testRepository = new CustomerRepository();
-        CustomerService testService = new CustomerService(testRepository);
-        Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer1 = new Customer(1L, "Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+        CreateAddressRequest addressRequest = createValidAddressRequest();
+        CreateCustomerRequest customerRequest = createCustomerRequest("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299");
+        customerRequest.setAddress(addressRequest);
 
-        Customer createdCustomer = testService.create(customer1);
-        Customer foundCustomer = testService.findById(1L);
+        Customer createdCustomer = testService.create(customerRequest);
+        Customer foundCustomer = testService.findById(createdCustomer.getId());
 
         assertSame(createdCustomer, foundCustomer);
     }
 
     @Test
     void shouldThrowCustomerNotFoundExceptionWhenCustomerDoesNotExist() {
-        CustomerRepository testRepository = new CustomerRepository();
-        CustomerService testService = new CustomerService(testRepository);
-
         CustomerNotFoundException exception = assertThrows(CustomerNotFoundException.class, () -> testService.findById(1L));
         assertEquals("Customer with ID 1 was not found.", exception.getMessage());
     }
 
     @Test
     void shouldDeleteCustomerById() {
-        CustomerRepository testRepository = new CustomerRepository();
-        CustomerService testService = new CustomerService(testRepository);
-        Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer1 = new Customer(1L, "Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+        CreateAddressRequest addressRequest = createValidAddressRequest();
+        CreateCustomerRequest customerRequest = createCustomerRequest("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299");
+        customerRequest.setAddress(addressRequest);
 
-        testService.create(customer1);
-        testService.deleteById(1L);
+        Customer createdCustomer = testService.create(customerRequest);
+        testService.deleteById(createdCustomer.getId());
 
-        assertTrue(testRepository.findById(1L).isEmpty());
+        assertTrue(testRepository.findById(createdCustomer.getId()).isEmpty());
     }
 
     @Test
     void shouldThrowCustomerNotFoundExceptionWhenDeletingNonExistingCustomer() {
-        CustomerRepository testRepository = new CustomerRepository();
-        CustomerService testService = new CustomerService(testRepository);
-
         CustomerNotFoundException exception = assertThrows(CustomerNotFoundException.class, () -> testService.deleteById(1L));
 
         assertEquals("Customer with ID 1 was not found.", exception.getMessage());
@@ -91,18 +90,42 @@ public class CustomerServiceTest {
 
     @Test
     void shouldReturnAllCustomers() {
-        CustomerRepository testRepository = new CustomerRepository();
-        CustomerService testService = new CustomerService(testRepository);
-        Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer1 = new Customer(1L, "Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
-        Customer customer2 = new Customer(2L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        CreateAddressRequest addressRequest = createValidAddressRequest();
+        CreateCustomerRequest customerRequest1 = createCustomerRequest("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299");
+        CreateCustomerRequest customerRequest2 = createCustomerRequest("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333");
 
-        testService.create(customer1);
-        testService.create(customer2);
+        customerRequest1.setAddress(addressRequest);
+        customerRequest2.setAddress(addressRequest);
+
+        Customer customer1 = testService.create(customerRequest1);
+        Customer customer2 = testService.create(customerRequest2);
         List<Customer> foundCustomers = testService.findAll();
 
         assertEquals(2, foundCustomers.size());
         assertTrue(foundCustomers.contains(customer1));
         assertTrue(foundCustomers.contains(customer2));
+    }
+
+    private CreateCustomerRequest createCustomerRequest(String firstName, String lastName, String email, String phoneNumber) {
+        CreateCustomerRequest customerRequest = new CreateCustomerRequest();
+
+        customerRequest.setFirstName(firstName);
+        customerRequest.setLastName(lastName);
+        customerRequest.setEmail(email);
+        customerRequest.setPhoneNumber(phoneNumber);
+
+        return customerRequest;
+    }
+
+    private CreateAddressRequest createValidAddressRequest() {
+        CreateAddressRequest addressRequest = new CreateAddressRequest();
+        addressRequest.setStreet("Wschodnia");
+        addressRequest.setBuildingNumber("130");
+        addressRequest.setApartmentNumber("15");
+        addressRequest.setCity("Łódź");
+        addressRequest.setPostalCode("90-266");
+        addressRequest.setCountry("Poland");
+
+        return addressRequest;
     }
 }

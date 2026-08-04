@@ -7,17 +7,12 @@ import java.util.*;
 public class CustomerRepository {
 
     private final Map<Long, Customer> customers = new HashMap<>();
+    private long idCounter = 1L;
 
-    public Customer create(Customer customer) {
-        if (customer == null) {
-            throw new IllegalArgumentException("Customer cannot be null.");
-        }
-
-        if (customers.containsKey(customer.getId())) {
-            throw new IllegalArgumentException("Customer with this ID already exists.");
-        }
-
+    public Customer create(String firstName, String lastName, String email, String phoneNumber, Address address) {
+        Customer customer = new Customer(idCounter, firstName, lastName, email, phoneNumber, address);
         customers.put(customer.getId(), customer);
+        idCounter++;
 
         return customer;
     }
