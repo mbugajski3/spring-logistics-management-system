@@ -1,1 +1,29 @@
-GET http://localhost:8080/api/customers/1
+@customerId = 1
+
+### Get all customers
+GET http://localhost:8080/api/customers
+
+### Get customer by ID
+GET http://localhost:8080/api/customers/{{customerId}}
+
+### Create customer
+POST http://localhost:8080/api/customers
+Content-Type: application/json
+
+{
+  "firstName": "Anna",
+  "lastName": "Kowalska",
+  "email": "anna.kowalska@example.com",
+  "phoneNumber": "500600700",
+  "address": {
+    "street": "Długa",
+    "buildingNumber": "10A",
+    "apartmentNumber": "5",
+    "city": "Gdańsk",
+    "postalCode": "80-831",
+    "country": "Poland"
+  }
+}
+
+### Delete customer by ID
+DELETE http://localhost:8080/api/customers/{{customerId}}
