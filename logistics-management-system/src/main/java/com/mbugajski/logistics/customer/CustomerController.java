@@ -32,4 +32,10 @@ public class CustomerController {
         return customerService.create(customerRequest);
     }
 
+    @DeleteMapping("/{customerId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable long customerId) {
+        customerService.deleteById(customerId);
+    }
+
 }
