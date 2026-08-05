@@ -31,7 +31,7 @@ public class CustomerControllerTest {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
         Customer customer1 = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
         Customer customer2 = new Customer(2L, "Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
-        
+
         when(customerService.findAll()).thenReturn(List.of(customer1, customer2));
 
         mockMvc.perform(get("/api/customers"))
@@ -163,6 +163,21 @@ public class CustomerControllerTest {
                 .andExpect(status().isBadRequest());
 
         verify(customerService, never()).create(any(CreateCustomerRequest.class));
+    }
+
+    @Test
+    void shouldReturnConflictWhenEmailIsTaken() throws Exception {
+        CreateCustomerRequest customerRequest = createCustomerRequest("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333");
+        customerRequest.setAddress(createValidAddressRequest());
+
+        when(customerService.create(any(CreateCustomerRequest.class))).thenThrow(new CustomerEmailAlreadyExistsException("franciszek@cyprian.com"));
+
+        mockMvc.perform(post("/api/customers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonMapper.writeValueAsString(customerRequest)))
+                .andExpect(status().isConflict());
+
+        verify(customerService).create(any(CreateCustomerRequest.class));
     }
 
     private CreateCustomerRequest createCustomerRequest(String firstName, String lastName, String email, String phoneNumber) {

@@ -33,7 +33,7 @@ simple frontend for interacting with the API.
 |---|---|---|---|
 | `GET` | `/api/customers` | Retrieve all customers | `200 OK` |
 | `GET` | `/api/customers/{customerId}` | Retrieve a customer by ID | `200 OK`, `404 Not Found` |
-| `POST` | `/api/customers` | Create a new customer | `201 Created`, `400 Bad Request` |
+| `POST` | `/api/customers` | Create a new customer | `201 Created`, `400 Bad Request`, `409 Conflict` |
 | `DELETE` | `/api/customers/{customerId}` | Delete a customer by ID | `204 No Content`, `404 Not Found` |
 
 ## Technologies
@@ -178,7 +178,7 @@ Content-Type: application/json
 ## Roadmap
 
 - [ ] Add a customer update endpoint
-- [ ] Return `409 Conflict` when an email address is already in use
+- [x] Return `409 Conflict` when an email address is already in use
 - [ ] Replace the in-memory repository with PostgreSQL and Spring Data JPA
 - [ ] Add shipment creation and management
 - [ ] Add courier and vehicle management
