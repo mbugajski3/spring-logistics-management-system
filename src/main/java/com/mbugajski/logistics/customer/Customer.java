@@ -111,7 +111,7 @@ public class Customer {
             throw new IllegalArgumentException("Email cannot be blank.");
         }
 
-        this.email = email.trim();
+        this.email = email.trim().toLowerCase();
     }
 
     public void changePhoneNumber(String phoneNumber) {

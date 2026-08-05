@@ -1,6 +1,7 @@
 package com.mbugajski.logistics.customer;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,6 +16,10 @@ public class UpdateCustomerRequest {
     @Pattern(regexp = ".*\\S.*", message = "Last name cannot be blank.")
     private String lastName;
 
+    @Email(message = "Wrong email format.")
+    @Pattern(regexp = ".*\\S.*", message = "Email cannot be blank.")
+    private String email;
+
     @Pattern(regexp = ".*\\S.*", message = "Phone number cannot be blank.")
     private String phoneNumber;
 
@@ -24,6 +29,7 @@ public class UpdateCustomerRequest {
     public boolean hasNoUpdates() {
         return firstName == null
                 && lastName == null
+                && email == null
                 && phoneNumber == null
                 && address == null;
     }

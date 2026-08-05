@@ -78,6 +78,20 @@ public class CustomerService {
             throw new EmptyCustomerUpdateException();
         }
 
+        if (customerRequest.getEmail() != null) {
+            String requestedEmail = customerRequest.getEmail().trim();
+
+            boolean emailChanged = !customer.getEmail().equalsIgnoreCase(requestedEmail);
+
+            if (emailChanged && customerRepository.existsByEmail(requestedEmail)) {
+                throw new CustomerEmailAlreadyExistsException(requestedEmail);
+            }
+
+            if (emailChanged) {
+                customer.changeEmail(requestedEmail);
+            }
+        }
+
         if (customerRequest.getFirstName() != null) {
             customer.changeFirstName(customerRequest.getFirstName());
         }
