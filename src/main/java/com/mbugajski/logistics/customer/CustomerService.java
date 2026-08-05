@@ -19,10 +19,10 @@ public class CustomerService {
             throw new IllegalArgumentException("Customer cannot be null.");
         }
 
-        String email = customerRequest.getEmail();
+        String email = customerRequest.getEmail().trim().toLowerCase();
 
         if (customerRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("Customer with this email already exists.");
+            throw new CustomerEmailAlreadyExistsException(email);
         }
 
         String firstName = customerRequest.getFirstName();

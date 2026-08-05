@@ -42,7 +42,8 @@ public class CustomerServiceTest {
 
         testService.create(customerRequest1);
 
-        assertThrows(IllegalArgumentException.class, () -> testService.create(customerRequest2));
+        CustomerEmailAlreadyExistsException exception = assertThrows(CustomerEmailAlreadyExistsException.class, () -> testService.create(customerRequest2));
+        assertEquals("Customer with email 'adrian@nowak.com' already exists.", exception.getMessage());
         assertEquals(1, testRepository.findAll().size());
     }
 
