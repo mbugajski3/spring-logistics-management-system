@@ -29,12 +29,13 @@ simple frontend for interacting with the API.
 
 ## API endpoints
 
-| Method | Endpoint | Description | Possible responses |
-|---|---|---|---|
-| `GET` | `/api/customers` | Retrieve all customers | `200 OK` |
-| `GET` | `/api/customers/{customerId}` | Retrieve a customer by ID | `200 OK`, `404 Not Found` |
-| `POST` | `/api/customers` | Create a new customer | `201 Created`, `400 Bad Request`, `409 Conflict` |
-| `DELETE` | `/api/customers/{customerId}` | Delete a customer by ID | `204 No Content`, `404 Not Found` |
+| Method   | Endpoint | Description                    | Possible responses                               |
+|----------|---|--------------------------------|--------------------------------------------------|
+| `GET`    | `/api/customers` | Retrieve all customers         | `200 OK`                                         |
+| `GET`    | `/api/customers/{customerId}` | Retrieve a customer by ID      | `200 OK`, `404 Not Found`                        |
+| `POST`   | `/api/customers` | Create a new customer          | `201 Created`, `400 Bad Request`, `409 Conflict` |
+| `DELETE` | `/api/customers/{customerId}` | Delete a customer by ID        | `204 No Content`, `404 Not Found`                |
+| `PATCH`  | `/api/customers/{customerId}` | Partialy updates customer data | `200 OK`, `400 Bad Request`, `404 Not Found`     |
 
 ## Technologies
 

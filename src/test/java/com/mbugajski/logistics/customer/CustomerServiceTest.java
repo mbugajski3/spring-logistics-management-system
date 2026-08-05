@@ -107,6 +107,97 @@ public class CustomerServiceTest {
         assertTrue(foundCustomers.contains(customer2));
     }
 
+    @Test
+    void shouldUpdateOnlyProvidedCustomerFields() {
+        Address address = createAddress();
+        Customer customer = testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+
+        UpdateCustomerRequest updateCustomerRequest = new UpdateCustomerRequest();
+
+        updateCustomerRequest.setLastName("Kowalski");
+
+        Customer updatedCustomer = testService.update(customer.getId(), updateCustomerRequest);
+
+        assertEquals("Kowalski", updatedCustomer.getLastName());
+        assertEquals("Adrian", updatedCustomer.getFirstName());
+        assertEquals("adrian@nowak.com", updatedCustomer.getEmail());
+        assertEquals("+48 699 300 299", updatedCustomer.getPhoneNumber());
+        assertEquals(address, updatedCustomer.getAddress());
+    }
+
+    @Test
+    void shouldRejectUpdateWithNoProvidedFields() {
+        Address address = createAddress();
+        Customer customer = testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+
+        UpdateCustomerRequest updateRequest = new UpdateCustomerRequest();
+
+        EmptyCustomerUpdateException exception = assertThrows(EmptyCustomerUpdateException.class, () -> testService.update(customer.getId(), updateRequest));
+
+        assertEquals("At least one field must be provided.", exception.getMessage());
+        assertEquals("Adrian", customer.getFirstName());
+        assertEquals("Nowak", customer.getLastName());
+    }
+
+    @Test
+    void shouldRejectNullUpdateRequest() {
+        Address address = createAddress();
+        Customer customer = testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> testService.update(customer.getId(), null));
+
+        assertEquals("Customer request cannot be null.", exception.getMessage());
+
+        assertEquals("Nowak", customer.getLastName());
+        assertEquals("Adrian", customer.getFirstName());
+        assertEquals("adrian@nowak.com", customer.getEmail());
+        assertEquals("+48 699 300 299", customer.getPhoneNumber());
+        assertEquals(address, customer.getAddress());
+    }
+
+    @Test
+    void shouldRejectUpdateForNonExistingCustomer() {
+        UpdateCustomerRequest updateRequest = new UpdateCustomerRequest();
+        updateRequest.setLastName("Kowalski");
+
+        assertThrows(CustomerNotFoundException.class,() -> testService.update(999L, updateRequest));
+    }
+
+    @Test
+    void shouldUpdateMultipleProvidedFields() {
+        Address oldAddress = createAddress();
+        Customer customer = testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", oldAddress);
+
+        UpdateCustomerRequest updateCustomerRequest = new UpdateCustomerRequest();
+        CreateAddressRequest addressRequest = new CreateAddressRequest();
+
+        addressRequest.setStreet("Zachodnia");
+        addressRequest.setBuildingNumber("330");
+        addressRequest.setApartmentNumber("20");
+        addressRequest.setCity("Kielce");
+        addressRequest.setPostalCode("70-230");
+        addressRequest.setCountry("Poland");
+
+        updateCustomerRequest.setFirstName("Piotr");
+        updateCustomerRequest.setPhoneNumber("+48 585 233 132");
+        updateCustomerRequest.setAddress(addressRequest);
+
+        Customer updatedCustomer = testService.update(customer.getId(), updateCustomerRequest);
+        Address updatedAddress = updatedCustomer.getAddress();
+
+        assertEquals("Piotr", updatedCustomer.getFirstName());
+        assertEquals("Nowak", updatedCustomer.getLastName());
+        assertEquals("adrian@nowak.com", updatedCustomer.getEmail());
+        assertEquals("+48 585 233 132", updatedCustomer.getPhoneNumber());
+        assertEquals("Zachodnia", updatedAddress.getStreet());
+        assertEquals("330", updatedAddress.getBuildingNumber());
+        assertEquals("20", updatedAddress.getApartmentNumber());
+        assertEquals("Kielce", updatedAddress.getCity());
+        assertEquals("70-230", updatedAddress.getPostalCode());
+        assertEquals("Poland", updatedAddress.getCountry());
+        assertNotSame(oldAddress, updatedAddress);
+    }
+
     private CreateCustomerRequest createCustomerRequest(String firstName, String lastName, String email, String phoneNumber) {
         CreateCustomerRequest customerRequest = new CreateCustomerRequest();
 
@@ -128,5 +219,17 @@ public class CustomerServiceTest {
         addressRequest.setCountry("Poland");
 
         return addressRequest;
+    }
+
+    private Address createAddress() {
+        Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
+
+        return address;
+    }
+
+    private Address createNewAddress() {
+        Address address = new Address("Zachodnia", "330", "20", "Kielce", "70-230", "Poland");
+
+        return address;
     }
 }

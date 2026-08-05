@@ -51,7 +51,7 @@ public class Customer {
         this.active = true;
     }
 
-    public String getName() {
+    private String getName() {
         return firstName + " " + lastName;
     }
 
@@ -92,6 +92,46 @@ public class Customer {
 
     public void deactivate() {
         active = false;
+    }
+
+    public void changeFirstName(String firstName) {
+        if (firstName == null || firstName.isBlank()) {
+            throw new IllegalArgumentException("First name cannot be blank.");
+        }
+
+        this.firstName = firstName.trim();
+    }
+
+    public void changeLastName(String lastName) {
+        if (lastName == null || lastName.isBlank()) {
+            throw new IllegalArgumentException("Last name cannot be blank.");
+        }
+
+        this.lastName = lastName.trim();
+    }
+
+    public void changeEmail(String email) {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Email cannot be blank.");
+        }
+
+        this.email = email.trim();
+    }
+
+    public void changePhoneNumber(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.isBlank()) {
+            throw new IllegalArgumentException("Phone number cannot be blank.");
+        }
+
+        this.phoneNumber = phoneNumber.trim();
+    }
+
+    public void changeAddress(Address address) {
+        if (address == null) {
+            throw new IllegalArgumentException("Address cannot be null.");
+        }
+
+        this.address = address;
     }
 
     @Override

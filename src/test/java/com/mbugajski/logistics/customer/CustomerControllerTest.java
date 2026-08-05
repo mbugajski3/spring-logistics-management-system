@@ -3,6 +3,7 @@ package com.mbugajski.logistics.customer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -160,7 +161,7 @@ public class CustomerControllerTest {
         mockMvc.perform(post("/api/customers")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson))
-                .andExpect(status().isBadRequest());
+                        .andExpect(status().isBadRequest());
 
         verify(customerService, never()).create(any(CreateCustomerRequest.class));
     }
@@ -175,9 +176,105 @@ public class CustomerControllerTest {
         mockMvc.perform(post("/api/customers")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMapper.writeValueAsString(customerRequest)))
-                .andExpect(status().isConflict());
+                        .andExpect(status().isConflict());
 
         verify(customerService).create(any(CreateCustomerRequest.class));
+    }
+
+    @Test
+    void shouldReturnOkWhenCustomerIsPartiallyUpdated() throws Exception {
+        Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
+        Customer updatedCustomer = new Customer(1L, "Franciszek", "Kowalski", "franciszek@cyprian.com", "+48 777 222 333", address);
+
+        UpdateCustomerRequest updateRequest = new UpdateCustomerRequest();
+        updateRequest.setLastName("Kowalski");
+
+        when(customerService.update(eq(1L), any(UpdateCustomerRequest.class))).thenReturn(updatedCustomer);
+
+        String updateJson = jsonMapper.writeValueAsString(updateRequest);
+
+        mockMvc.perform(patch("/api/customers/{customerId}", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateJson))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.id").value(1))
+                        .andExpect(jsonPath("$.firstName").value("Franciszek"))
+                        .andExpect(jsonPath("$.lastName").value("Kowalski"))
+                        .andExpect(jsonPath("$.email").value("franciszek@cyprian.com"))
+                        .andExpect(jsonPath("$.phoneNumber").value("+48 777 222 333"))
+                        .andExpect(jsonPath("$.address.street").value("Wschodnia"))
+                        .andExpect(jsonPath("$.address.buildingNumber").value("130"))
+                        .andExpect(jsonPath("$.address.apartmentNumber").value("15"))
+                        .andExpect(jsonPath("$.address.city").value("Łódź"))
+                        .andExpect(jsonPath("$.address.postalCode").value("90-266"))
+                        .andExpect(jsonPath("$.address.country").value("Poland"));
+
+        verify(customerService).update(eq(1L), any(UpdateCustomerRequest.class));
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenUpdatingNonExistingCustomer() throws Exception {
+        UpdateCustomerRequest customerRequest = new UpdateCustomerRequest();
+        customerRequest.setLastName("Kowalski");
+
+        when(customerService.update(eq(999L), any(UpdateCustomerRequest.class))).thenThrow(new CustomerNotFoundException(999L));
+
+        String updateJson = jsonMapper.writeValueAsString(customerRequest);
+
+        mockMvc.perform(patch("/api/customers/{customerId}", 999L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(updateJson))
+                .andExpect(status().isNotFound());
+
+        verify(customerService).update(eq(999L), any(UpdateCustomerRequest.class));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenUpdatedFirstNameIsBlank() throws Exception {
+        UpdateCustomerRequest customerRequest = new UpdateCustomerRequest();
+        customerRequest.setFirstName("   ");
+
+        String updateJson = jsonMapper.writeValueAsString(customerRequest);
+
+        mockMvc.perform(patch("/api/customers/{customerId}", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(updateJson))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(customerService);
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenUpdatedAddressIsInvalid() throws Exception {
+        UpdateCustomerRequest customerRequest = new UpdateCustomerRequest();
+        CreateAddressRequest invalidAddress = createInvalidAddressRequest();
+
+        customerRequest.setAddress(invalidAddress);
+
+        String updateJson = jsonMapper.writeValueAsString(customerRequest);
+
+        mockMvc.perform(patch("/api/customers/{customerId}", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateJson))
+                        .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(customerService);
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenNoUpdateFieldsAreProvided() throws Exception {
+        UpdateCustomerRequest customerRequest = new UpdateCustomerRequest();
+
+        when(customerService.update(eq(1L), any(UpdateCustomerRequest.class))).thenThrow(EmptyCustomerUpdateException.class);
+
+        String updateJson = jsonMapper.writeValueAsString(customerRequest);
+
+        mockMvc.perform(patch("/api/customers/{customerId}", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(updateJson))
+                .andExpect(status().isBadRequest());
+
+        verify(customerService).update(eq(1L), any(UpdateCustomerRequest.class));
     }
 
     private CreateCustomerRequest createCustomerRequest(String firstName, String lastName, String email, String phoneNumber) {
