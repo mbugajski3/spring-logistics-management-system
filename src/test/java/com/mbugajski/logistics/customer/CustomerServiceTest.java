@@ -4,6 +4,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 
 public class CustomerServiceTest {
 
@@ -196,6 +199,61 @@ public class CustomerServiceTest {
         assertEquals("70-230", updatedAddress.getPostalCode());
         assertEquals("Poland", updatedAddress.getCountry());
         assertNotSame(oldAddress, updatedAddress);
+    }
+
+    @Test
+    void shouldUpdateEmailWhenAvailable() {
+        Address address = createAddress();
+        Customer customer = testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+
+        UpdateCustomerRequest customerRequest = new UpdateCustomerRequest();
+        customerRequest.setEmail("NEW.EMAIL@EXAMPLE.COM  ");
+
+        Customer updatedCustomer = testService.update(customer.getId(), customerRequest);
+
+        assertEquals("Adrian", updatedCustomer.getFirstName());
+        assertEquals("Nowak", updatedCustomer.getLastName());
+        assertEquals("new.email@example.com", updatedCustomer.getEmail());
+        assertEquals("+48 699 300 299", updatedCustomer.getPhoneNumber());
+        assertEquals(address, updatedCustomer.getAddress());
+    }
+
+    @Test
+    void shouldAllowUpdatingCustomerWithOwnEmail() {
+        Address address = createAddress();
+        Customer customer = testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+
+        UpdateCustomerRequest customerRequest = new UpdateCustomerRequest();
+        customerRequest.setEmail("  ADRIAN@NOWAK.COM  ");
+
+        Customer updatedCustomer = testService.update(customer.getId(), customerRequest);
+
+        assertEquals("Adrian", updatedCustomer.getFirstName());
+        assertEquals("Nowak", updatedCustomer.getLastName());
+        assertEquals("adrian@nowak.com", updatedCustomer.getEmail());
+        assertEquals("+48 699 300 299", updatedCustomer.getPhoneNumber());
+        assertEquals(address, updatedCustomer.getAddress());
+    }
+
+    @Test
+    void shouldRejectEmailUsedByAnotherCustomer() {
+        Address address = createAddress();
+        Customer customer1 = testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+        Customer customer2 = testRepository.create("Piotr", "Kowalski", "piotr@kowalski.com", "+48 700 300 110", address);
+
+        UpdateCustomerRequest customerRequest = new UpdateCustomerRequest();
+        customerRequest.setEmail("piotr@kowalski.com");
+
+        CustomerEmailAlreadyExistsException exception = assertThrows(CustomerEmailAlreadyExistsException.class, () -> testService.update(customer1.getId(), customerRequest));
+
+        assertEquals("Customer with email 'piotr@kowalski.com' already exists.", exception.getMessage());
+        assertEquals("Adrian", customer1.getFirstName());
+        assertEquals("Nowak", customer1.getLastName());
+        assertEquals("adrian@nowak.com", customer1.getEmail());
+        assertEquals("+48 699 300 299", customer1.getPhoneNumber());
+        assertEquals(address, customer1.getAddress());
+
+        assertEquals(2, testRepository.findAll().size());
     }
 
     private CreateCustomerRequest createCustomerRequest(String firstName, String lastName, String email, String phoneNumber) {

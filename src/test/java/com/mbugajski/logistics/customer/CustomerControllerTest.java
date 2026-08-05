@@ -222,9 +222,9 @@ public class CustomerControllerTest {
         String updateJson = jsonMapper.writeValueAsString(customerRequest);
 
         mockMvc.perform(patch("/api/customers/{customerId}", 999L)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(updateJson))
-                .andExpect(status().isNotFound());
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateJson))
+                        .andExpect(status().isNotFound());
 
         verify(customerService).update(eq(999L), any(UpdateCustomerRequest.class));
     }
@@ -237,9 +237,9 @@ public class CustomerControllerTest {
         String updateJson = jsonMapper.writeValueAsString(customerRequest);
 
         mockMvc.perform(patch("/api/customers/{customerId}", 1L)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(updateJson))
-                .andExpect(status().isBadRequest());
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateJson))
+                        .andExpect(status().isBadRequest());
 
         verifyNoInteractions(customerService);
     }
@@ -270,11 +270,89 @@ public class CustomerControllerTest {
         String updateJson = jsonMapper.writeValueAsString(customerRequest);
 
         mockMvc.perform(patch("/api/customers/{customerId}", 1L)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(updateJson))
-                .andExpect(status().isBadRequest());
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateJson))
+                        .andExpect(status().isBadRequest());
 
         verify(customerService).update(eq(1L), any(UpdateCustomerRequest.class));
+    }
+
+    @Test
+    void shouldReturnOkWhenCustomerEmailIsUpdated() throws Exception {
+        Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
+        Customer updatedCustomer = new Customer(1L, "Franciszek", "Kowalski", "franciszek@cyprian.com", "+48 777 222 333", address);
+
+        UpdateCustomerRequest updateRequest = new UpdateCustomerRequest();
+        updateRequest.setEmail("franciszek@cyprian.com");
+
+        when(customerService.update(eq(1L), any(UpdateCustomerRequest.class))).thenReturn(updatedCustomer);
+
+        String updateJson = jsonMapper.writeValueAsString(updateRequest);
+
+        mockMvc.perform(patch("/api/customers/{customerId}", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateJson))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.id").value(1))
+                        .andExpect(jsonPath("$.firstName").value("Franciszek"))
+                        .andExpect(jsonPath("$.lastName").value("Kowalski"))
+                        .andExpect(jsonPath("$.email").value("franciszek@cyprian.com"))
+                        .andExpect(jsonPath("$.phoneNumber").value("+48 777 222 333"))
+                        .andExpect(jsonPath("$.address.street").value("Wschodnia"))
+                        .andExpect(jsonPath("$.address.buildingNumber").value("130"))
+                        .andExpect(jsonPath("$.address.apartmentNumber").value("15"))
+                        .andExpect(jsonPath("$.address.city").value("Łódź"))
+                        .andExpect(jsonPath("$.address.postalCode").value("90-266"))
+                        .andExpect(jsonPath("$.address.country").value("Poland"));
+
+        verify(customerService).update(eq(1L), any(UpdateCustomerRequest.class));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenUpdatedEmailHasInvalidFormat() throws Exception {
+        UpdateCustomerRequest customerRequest = new UpdateCustomerRequest();
+        customerRequest.setEmail("wrong-email");
+
+        String updateJson = jsonMapper.writeValueAsString(customerRequest);
+
+        mockMvc.perform(patch("/api/customers/{customerId}", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateJson))
+                        .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(customerService);
+    }
+
+    @Test
+    void shouldReturnConflictWhenUpdatedEmailIsAlreadyUsed() throws Exception {
+        UpdateCustomerRequest customerRequest = new UpdateCustomerRequest();
+        customerRequest.setEmail("piotr@kowalski.com");
+
+        when(customerService.update(eq(1L), any(UpdateCustomerRequest.class))).thenThrow(new CustomerEmailAlreadyExistsException("piotr@kowalski.com"));
+
+        String updateJson = jsonMapper.writeValueAsString(customerRequest);
+
+        mockMvc.perform(patch("/api/customers/{customerId}", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateJson))
+                        .andExpect(status().isConflict());
+
+        verify(customerService).update(eq(1L), any(UpdateCustomerRequest.class));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenUpdatedEmailIsBlank() throws Exception {
+        UpdateCustomerRequest customerRequest = new UpdateCustomerRequest();
+        customerRequest.setEmail("   ");
+
+        String updateJson = jsonMapper.writeValueAsString(customerRequest);
+
+        mockMvc.perform(patch("/api/customers/{customerId}", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateJson))
+                        .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(customerService);
     }
 
     private CreateCustomerRequest createCustomerRequest(String firstName, String lastName, String email, String phoneNumber) {

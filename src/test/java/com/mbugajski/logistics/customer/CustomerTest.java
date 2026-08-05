@@ -140,7 +140,7 @@ public class CustomerTest {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
         Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
-        customer.changeEmail("test@example.com");
+        customer.changeEmail("  test@example.com");
 
         assertEquals("test@example.com", customer.getEmail());
         assertEquals("Franciszek", customer.getFirstName());

@@ -1,4 +1,4 @@
-@customerId = 1
+@customerId = 2
 
 ### Get all customers
 GET http://localhost:8080/api/customers
@@ -11,9 +11,9 @@ POST http://localhost:8080/api/customers
 Content-Type: application/json
 
 {
-  "firstName": "Anna",
-  "lastName": "Kowalska",
-  "email": "anna.kowalska@example.com",
+  "firstName": "Klaudia",
+  "lastName": "Nowak",
+  "email": "klaudia.nowak@example.com",
   "phoneNumber": "500600700",
   "address": {
     "street": "Długa",
@@ -35,4 +35,13 @@ Content-Type: application/json
 {
   "lastName": "Kowalski",
   "phoneNumber": "+48 123 456 789"
+}
+
+
+### Update email
+PATCH http://localhost:8080/api/customers/2
+Content-Type: application/json
+
+{
+  "email": "ak.kowalska@example.com"
 }
