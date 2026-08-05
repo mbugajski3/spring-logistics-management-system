@@ -27,3 +27,12 @@ Content-Type: application/json
 
 ### Delete customer by ID
 DELETE http://localhost:8080/api/customers/{{customerId}}
+
+### Partially update customer
+PATCH http://localhost:8080/api/customers/1
+Content-Type: application/json
+
+{
+  "lastName": "Kowalski",
+  "phoneNumber": "+48 123 456 789"
+}

@@ -60,4 +60,51 @@ public class CustomerService {
     public List<Customer> findAll() {
         return customerRepository.findAll();
     }
+
+    public Customer update(long customerId, UpdateCustomerRequest customerRequest) {
+        if (customerRequest == null) {
+            throw new IllegalArgumentException("Customer request cannot be null.");
+        }
+
+        Optional<Customer> foundCustomer = customerRepository.findById(customerId);
+
+        if (foundCustomer.isEmpty()) {
+            throw new CustomerNotFoundException(customerId);
+        }
+
+        Customer customer = foundCustomer.get();
+
+        if (customerRequest.hasNoUpdates()) {
+            throw new EmptyCustomerUpdateException();
+        }
+
+        if (customerRequest.getFirstName() != null) {
+            customer.changeFirstName(customerRequest.getFirstName());
+        }
+
+        if (customerRequest.getLastName() != null) {
+            customer.changeLastName(customerRequest.getLastName());
+        }
+
+        if (customerRequest.getPhoneNumber() != null) {
+            customer.changePhoneNumber(customerRequest.getPhoneNumber());
+        }
+
+        if (customerRequest.getAddress() != null) {
+            CreateAddressRequest addressRequest = customerRequest.getAddress();
+
+            Address address = new Address(
+                    addressRequest.getStreet(),
+                    addressRequest.getBuildingNumber(),
+                    addressRequest.getApartmentNumber(),
+                    addressRequest.getCity(),
+                    addressRequest.getPostalCode(),
+                    addressRequest.getCountry()
+            );
+
+            customer.changeAddress(address);
+        }
+
+        return customer;
+    }
 }
