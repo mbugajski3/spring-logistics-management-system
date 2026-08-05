@@ -51,10 +51,6 @@ public class Customer {
         this.active = true;
     }
 
-    private String getName() {
-        return firstName + " " + lastName;
-    }
-
     public void addDebt(BigDecimal amount) {
         if (amount == null) {
             throw new IllegalArgumentException("Amount cannot be null.");

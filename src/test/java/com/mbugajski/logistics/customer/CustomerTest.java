@@ -16,7 +16,6 @@ public class CustomerTest {
         assertEquals(1L, customer.getId());
         assertEquals("Franciszek", customer.getFirstName());
         assertEquals("Cyprian", customer.getLastName());
-        assertEquals("Franciszek Cyprian", customer.getName());
         assertEquals("franciszek@cyprian.com", customer.getEmail());
         assertEquals("+48 777 222 333", customer.getPhoneNumber());
         assertSame(address, customer.getAddress());
