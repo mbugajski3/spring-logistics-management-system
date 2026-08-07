@@ -101,14 +101,6 @@ public class CustomerControllerTest {
     }
 
     @Test
-    void shouldDeleteCustomer() throws Exception {
-        mockMvc.perform(delete("/api/customers/1"))
-                .andExpect(status().isNoContent());
-
-        verify(customerService).deleteById(1L);
-    }
-
-    @Test
     void shouldReturnNotFoundWhenDeletingNonExistingCustomer() throws Exception {
         doThrow(new CustomerNotFoundException(1L))
                 .when(customerService).deleteById(1L);
@@ -354,6 +346,108 @@ public class CustomerControllerTest {
 
         verifyNoInteractions(customerService);
     }
+
+    @Test
+    void shouldReturnOkWhenCustomerIsActivated() throws Exception {
+        Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
+        Customer activeCustomer = new Customer(1L, "Franciszek", "Kowalski", "franciszek@cyprian.com", "+48 777 222 333", address);
+
+        when(customerService.activate(1L)).thenReturn(activeCustomer);
+
+        mockMvc.perform(patch("/api/customers/{customerId}/activate", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1L))
+                .andExpect(jsonPath("$.active").value(true));
+
+        verify(customerService).activate(1L);
+    }
+
+    @Test
+    void shouldReturnConflictWhenActivatingAlreadyActiveCustomer() throws Exception {
+        when(customerService.activate(1L)).thenThrow(new CustomerAlreadyActiveException());
+
+        mockMvc.perform(patch("/api/customers/{customerId}/activate", 1L))
+                .andExpect(status().isConflict());
+
+        verify(customerService).activate(1L);
+    }
+
+    @Test
+    void shouldReturnOkWhenCustomerIsDeactivated() throws Exception {
+        Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
+        Customer inactiveCustomer = new Customer(1L, "Franciszek", "Kowalski", "franciszek@cyprian.com", "+48 777 222 333", address);
+        inactiveCustomer.deactivate();
+
+        when(customerService.deactivate(1L)).thenReturn(inactiveCustomer);
+
+        mockMvc.perform(patch("/api/customers/{customerId}/deactivate", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1L))
+                .andExpect(jsonPath("$.active").value(false));
+
+        verify(customerService).deactivate(1L);
+    }
+
+    @Test
+    void shouldReturnConflictWhenDeactivatingAlreadyInactiveCustomer() throws Exception {
+        when(customerService.deactivate(1L)).thenThrow(new CustomerAlreadyInactiveException());
+
+        mockMvc.perform(patch("/api/customers/{customerId}/deactivate", 1L))
+                .andExpect(status().isConflict());
+
+        verify(customerService).deactivate(1L);
+    }
+
+    @Test
+    void shouldReturnConflictWhenDeactivatingCustomerWithDebt() throws Exception {
+        when(customerService.deactivate(1L)).thenThrow(new CustomerHasOutstandingDebtException());
+
+        mockMvc.perform(patch("/api/customers/{customerId}/deactivate", 1L))
+                .andExpect(status().isConflict());
+
+        verify(customerService).deactivate(1L);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenActivatingNonExistingCustomer() throws Exception {
+        when(customerService.activate(999L)).thenThrow(new CustomerNotFoundException(999L));
+
+        mockMvc.perform(patch("/api/customers/{customerId}/activate", 999L))
+                .andExpect(status().isNotFound());
+
+        verify(customerService).activate(999L);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenDeactivatingNonExistingCustomer() throws Exception {
+        when(customerService.deactivate(999L)).thenThrow(new CustomerNotFoundException(999L));
+
+        mockMvc.perform(patch("/api/customers/{customerId}/deactivate", 999L))
+                .andExpect(status().isNotFound());
+
+        verify(customerService).deactivate(999L);
+    }
+
+    @Test
+    void shouldReturnNoContentWhenCustomerIsDeleted() throws Exception {
+        mockMvc.perform(delete("/api/customers/1"))
+                .andExpect(status().isNoContent());
+
+        verify(customerService).deleteById(1L);
+    }
+
+    @Test
+    void shouldReturnConflictWhenActiveCustomerCannotBeDeleted() throws Exception {
+        doThrow(new ActiveCustomerDeletionException())
+                .when(customerService)
+                .deleteById(1L);
+
+        mockMvc.perform(delete("/api/customers/1"))
+                .andExpect(status().isConflict());
+
+        verify(customerService).deleteById(1L);
+    }
+
 
     private CreateCustomerRequest createCustomerRequest(String firstName, String lastName, String email, String phoneNumber) {
         CreateCustomerRequest customerRequest = new CreateCustomerRequest();

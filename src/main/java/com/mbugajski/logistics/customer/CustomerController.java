@@ -43,4 +43,14 @@ public class CustomerController {
         return customerService.update(customerId, updateCustomerRequest);
     }
 
+    @PatchMapping("/{customerId}/activate")
+    public Customer activate(@PathVariable long customerId) {
+        return customerService.activate(customerId);
+    }
+
+    @PatchMapping("/{customerId}/deactivate")
+    public Customer deactivate(@PathVariable long customerId) {
+        return customerService.deactivate(customerId);
+    }
+
 }

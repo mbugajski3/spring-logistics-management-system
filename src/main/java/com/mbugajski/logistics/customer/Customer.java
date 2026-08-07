@@ -47,7 +47,7 @@ public class Customer {
         }
         this.address = address;
 
-        this.debt = BigDecimal.ZERO;
+        this.debt = new BigDecimal("0.00");
         this.active = true;
     }
 
@@ -83,14 +83,26 @@ public class Customer {
     }
 
     public void activate() {
-        active = true;
+        if (!active) {
+            this.active = true;
+        } else {
+            throw new CustomerAlreadyActiveException();
+        }
     }
 
     public void deactivate() {
-        active = false;
+        if (!active) {
+            throw new CustomerAlreadyInactiveException();
+        }
+
+        if (debt.compareTo(BigDecimal.ZERO) > 0) {
+            throw new CustomerHasOutstandingDebtException();
+        }
+
+        this.active = false;
     }
 
-    public void changeFirstName(String firstName) {
+    public void changeFirstName(final String firstName) {
         if (firstName == null || firstName.isBlank()) {
             throw new IllegalArgumentException("First name cannot be blank.");
         }

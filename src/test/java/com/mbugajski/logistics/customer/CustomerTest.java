@@ -19,7 +19,7 @@ public class CustomerTest {
         assertEquals("franciszek@cyprian.com", customer.getEmail());
         assertEquals("+48 777 222 333", customer.getPhoneNumber());
         assertSame(address, customer.getAddress());
-        assertEquals(BigDecimal.ZERO, customer.getDebt());
+        assertEquals(new BigDecimal("0.00"), customer.getDebt());
         assertTrue(customer.isActive());
     }
 
@@ -225,5 +225,70 @@ public class CustomerTest {
         assertEquals("Łódź", customer.getAddress().getCity());
         assertEquals("90-266", customer.getAddress().getPostalCode());
         assertEquals("Poland", customer.getAddress().getCountry());
+    }
+
+    @Test
+    void shouldActivateInactiveCustomer() {
+        Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
+        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        customer.deactivate();
+
+        assertFalse(customer.isActive());
+
+        customer.activate();
+
+        assertTrue(customer.isActive());
+    }
+
+    @Test
+    void shouldRejectActivationOfActiveCustomer() {
+        Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
+        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+
+        CustomerAlreadyActiveException exception = assertThrows(CustomerAlreadyActiveException.class, customer::activate);
+        assertEquals("Cannot activate already active customer.", exception.getMessage());
+        assertTrue(customer.isActive());
+    }
+
+    @Test
+    void shouldDeactivateActiveCustomerWithoutDebt() {
+        Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
+        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        assertTrue(customer.isActive());
+
+        customer.deactivate();
+
+        assertFalse(customer.isActive());
+    }
+
+    @Test
+    void shouldRejectDeactivationOfInactiveCustomer() {
+        Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
+        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        assertTrue(customer.isActive());
+
+        customer.deactivate();
+
+        assertFalse(customer.isActive());
+
+        CustomerAlreadyInactiveException exception = assertThrows(CustomerAlreadyInactiveException.class, customer::deactivate);
+
+        assertEquals("Customer is already inactive.", exception.getMessage());
+
+        assertFalse(customer.isActive());
+    }
+
+    @Test
+    void shouldRejectDeactivationOfCustomerWithDebt() {
+        Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
+        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        assertTrue(customer.isActive());
+        customer.addDebt(new BigDecimal("100.00"));
+
+        assertTrue(customer.getDebt().compareTo(BigDecimal.ZERO) > 0);
+        CustomerHasOutstandingDebtException exception = assertThrows(CustomerHasOutstandingDebtException.class, customer::deactivate);
+        assertEquals("Customer with debt cannot be deactivated.", exception.getMessage());
+        assertTrue(customer.isActive());
+        assertEquals(new BigDecimal("100.00"), customer.getDebt());
     }
 }

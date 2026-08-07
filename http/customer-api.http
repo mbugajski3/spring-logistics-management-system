@@ -1,4 +1,4 @@
-@customerId = 2
+@customerId = 1
 
 ### Get all customers
 GET http://localhost:8080/api/customers
@@ -37,7 +37,6 @@ Content-Type: application/json
   "phoneNumber": "+48 123 456 789"
 }
 
-
 ### Update email
 PATCH http://localhost:8080/api/customers/2
 Content-Type: application/json
@@ -45,3 +44,8 @@ Content-Type: application/json
 {
   "email": "ak.kowalska@example.com"
 }
+### Deactivate customer
+PATCH http://localhost:8080/api/customers/1/deactivate
+
+### Activate customer
+PATCH http://localhost:8080/api/customers/999/activate
