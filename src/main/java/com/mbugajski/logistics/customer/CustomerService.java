@@ -2,6 +2,7 @@ package com.mbugajski.logistics.customer;
 
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -53,7 +54,12 @@ public class CustomerService {
     }
 
     public void deleteById(long customerId) {
-        findById(customerId);
+        Customer customerFound = findById(customerId);
+
+        if (customerFound.isActive()) {
+            throw new ActiveCustomerDeletionException();
+        }
+
         customerRepository.deleteById(customerId);
     }
 
@@ -118,6 +124,20 @@ public class CustomerService {
 
             customer.changeAddress(address);
         }
+
+        return customer;
+    }
+
+    public Customer activate(long customerId) {
+        Customer customer = findById(customerId);
+        customer.activate();
+
+        return customer;
+    }
+
+    public Customer deactivate(long customerId) {
+        Customer customer = findById(customerId);
+        customer.deactivate();
 
         return customer;
     }

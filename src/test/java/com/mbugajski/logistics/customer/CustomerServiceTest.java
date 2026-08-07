@@ -2,7 +2,11 @@ package com.mbugajski.logistics.customer;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -71,18 +75,6 @@ public class CustomerServiceTest {
     void shouldThrowCustomerNotFoundExceptionWhenCustomerDoesNotExist() {
         CustomerNotFoundException exception = assertThrows(CustomerNotFoundException.class, () -> testService.findById(1L));
         assertEquals("Customer with ID 1 was not found.", exception.getMessage());
-    }
-
-    @Test
-    void shouldDeleteCustomerById() {
-        CreateAddressRequest addressRequest = createValidAddressRequest();
-        CreateCustomerRequest customerRequest = createCustomerRequest("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299");
-        customerRequest.setAddress(addressRequest);
-
-        Customer createdCustomer = testService.create(customerRequest);
-        testService.deleteById(createdCustomer.getId());
-
-        assertTrue(testRepository.findById(createdCustomer.getId()).isEmpty());
     }
 
     @Test
@@ -254,6 +246,98 @@ public class CustomerServiceTest {
         assertEquals(address, customer1.getAddress());
 
         assertEquals(2, testRepository.findAll().size());
+    }
+
+    @Test
+    void shouldActivateCustomer() {
+        Address address = createAddress();
+        Customer customer1 = testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+        customer1.deactivate();
+        assertFalse(customer1.isActive());
+
+        Customer activatedCustomer = testService.activate(customer1.getId());
+
+        assertTrue(activatedCustomer.isActive());
+        assertSame(customer1, activatedCustomer);
+    }
+
+    @Test
+    void shouldRejectActivationOfActiveCustomer() {
+        Address address = createAddress();
+        Customer customer = testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+
+        CustomerAlreadyActiveException exception = assertThrows(CustomerAlreadyActiveException.class, () -> testService.activate(customer.getId()));
+
+        assertEquals("Cannot activate already active customer.", exception.getMessage());
+        assertTrue(customer.isActive());
+    }
+
+    @Test
+    void shouldDeactivateActiveCustomerWithoutDebt() {
+        Address address = createAddress();
+        Customer customer = testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+
+        Customer inactiveCustomer = testService.deactivate(customer.getId());
+
+        assertFalse(inactiveCustomer.isActive());
+        assertEquals(new BigDecimal("0.00"), inactiveCustomer.getDebt());
+    }
+
+    @Test
+    void shouldRejectDeactivateInactiveCustomer() {
+        Address address = createAddress();
+        Customer customer = testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+        customer.deactivate();
+
+        CustomerAlreadyInactiveException exception = assertThrows(CustomerAlreadyInactiveException.class, () -> testService.deactivate(customer.getId()));
+
+        assertEquals("Customer is already inactive.", exception.getMessage());
+        assertFalse(customer.isActive());
+    }
+
+    @Test
+    void shouldRejectDeactivationOfCustomerWithDebt() {
+        Address address = createAddress();
+        Customer customer = testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+        customer.addDebt(new BigDecimal("200.00"));
+
+        CustomerHasOutstandingDebtException exception = assertThrows(CustomerHasOutstandingDebtException.class, () -> testService.deactivate(customer.getId()));
+
+        assertEquals("Customer with debt cannot be deactivated.", exception.getMessage());
+        assertTrue(customer.isActive());
+        assertEquals(new BigDecimal("200.00"), customer.getDebt());
+    }
+
+    @Test
+    void shouldRejectActivationOfNonExisingCustomer() {
+        CustomerNotFoundException exception = assertThrows(CustomerNotFoundException.class, () -> testService.activate(999L));
+
+        assertEquals("Customer with ID 999 was not found.", exception.getMessage());
+    }
+
+    @Test
+    void shouldRejectDeletionOfActiveCustomer() {
+        Address address = createAddress();
+        Customer customer = testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+
+        ActiveCustomerDeletionException exception = assertThrows(ActiveCustomerDeletionException.class, () -> testService.deleteById(customer.getId()));
+
+        Optional<Customer> foundCustomer = testRepository.findById(customer.getId());
+
+        assertEquals("Cannot delete active customer.", exception.getMessage());
+        assertTrue(foundCustomer.isPresent());
+    }
+
+    @Test
+    void shouldDeleteInactiveCustomer() {
+        Address address = createAddress();
+        Customer customer = testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+        customer.deactivate();
+
+        testService.deleteById(customer.getId());
+
+        Optional<Customer> foundCustomer = testRepository.findById(customer.getId());
+        assertTrue(foundCustomer.isEmpty());
     }
 
     private CreateCustomerRequest createCustomerRequest(String firstName, String lastName, String email, String phoneNumber) {

@@ -4,9 +4,9 @@
 
 Logistics Management System is a Spring Boot REST API designed to support the core operations of a logistics company.
 
-The project currently focuses on customer management and provides endpoints for creating customers, retrieving a
-customer by ID, retrieving all customers, and deleting customers. It also includes request validation, basic exception
-handling, automated tests, and a continuous integration workflow.
+The project currently focuses on customer management and provides endpoints for creating customers, retrieving customer data,
+partially updating customers, changing customer status, and deleting customers. It also includes request validation, domain-specific exception handling,
+automated tests, and a continuous integration workflow.
 
 This is my first Spring Boot project and an important part of my backend development portfolio. I plan to develop it
 continuously as I learn new technologies and backend concepts. Each new stage of the project will reflect the skills I
@@ -21,22 +21,27 @@ simple frontend for interacting with the API.
 - Create a new customer
 - Retrieve a customer by ID
 - Retrieve all customers
-- Delete a customer
-- Change customer email
+- Activate and deactivate customers
+- Deactivate customers only when they have no outstanding debt
+- Delete customers only when they are inactive
+- Partially update customer data
+- Update customer email with uniqueness validation
 - Validate customer and address data
-- Return appropriate HTTP status codes for invalid requests and missing customers
+- Return appropriate HTTP status codes for invalid requests, conflicts, and missing customers
 - Run automated domain, repository, service, and controller tests
 - Build and test the application automatically with GitHub Actions
 
 ## API endpoints
 
-| Method   | Endpoint | Description               | Possible responses                               |
-|----------|---|---------------------------|--------------------------------------------------|
-| `GET`    | `/api/customers` | Retrieve all customers    | `200 OK`                                         |
-| `GET`    | `/api/customers/{customerId}` | Retrieve a customer by ID | `200 OK`, `404 Not Found`                        |
-| `POST`   | `/api/customers` | Create a new customer     | `201 Created`, `400 Bad Request`, `409 Conflict` |
-| `DELETE` | `/api/customers/{customerId}` | Delete a customer by ID   | `204 No Content`, `404 Not Found`                |
-| `PATCH`  | `/api/customers/{customerId}` | Updates customer data     | `200 OK`, `400 Bad Request`, `404 Not Found`     |
+| Method   | Endpoint                                 | Description                    | Possible responses                                           |
+|----------|------------------------------------------|--------------------------------|--------------------------------------------------------------|
+| `GET`    | `/api/customers`                         | Retrieve all customers         | `200 OK`                                                     |
+| `GET`    | `/api/customers/{customerId}`            | Retrieve a customer by ID      | `200 OK`, `404 Not Found`                                    |
+| `POST`   | `/api/customers`                         | Create a new customer          | `201 Created`, `400 Bad Request`, `409 Conflict`             |
+| `DELETE` | `/api/customers/{customerId}`            | Delete a customer by ID        | `204 No Content`, `404 Not Found`, `409 Conflict`            |
+| `PATCH`  | `/api/customers/{customerId}`            | Partially update customer data | `200 OK`, `400 Bad Request`, `404 Not Found`, `409 Conflict` |
+| `PATCH` | `/api/customers/{customerId}/activate`   | Activate a customer            | `200 OK`, `404 Not Found`, `409 Conflict`|
+| `PATCH` | `/api/customers/{customerId}/deactivate` | Deactivate a customer          | `200 OK`, `404 Not Found`, `409 Conflict`|
 
 ## Technologies
 
@@ -66,14 +71,6 @@ simple frontend for interacting with the API.
 │   │   ├── java/com/mbugajski/logistics/
 │   │   │   ├── LogisticsManagementSystemApplication.java
 │   │   │   └── customer/
-│   │   │       ├── Address.java
-│   │   │       ├── CreateAddressRequest.java
-│   │   │       ├── CreateCustomerRequest.java
-│   │   │       ├── Customer.java
-│   │   │       ├── CustomerController.java
-│   │   │       ├── CustomerNotFoundException.java
-│   │   │       ├── CustomerRepository.java
-│   │   │       └── CustomerService.java
 │   │   └── resources/
 │   │       └── application.properties
 │   └── test/
@@ -179,7 +176,7 @@ Content-Type: application/json
 
 ## Roadmap
 
-- [ ] Add a customer update endpoint
+- [x] Add a customer update endpoint
 - [x] Return `409 Conflict` when an email address is already in use
 - [ ] Replace the in-memory repository with PostgreSQL and Spring Data JPA
 - [ ] Add shipment creation and management
