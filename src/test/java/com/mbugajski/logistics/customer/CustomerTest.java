@@ -11,9 +11,8 @@ public class CustomerTest {
     @Test
     void shouldCreateActiveCustomerWithoutDebt() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
-        assertEquals(1L, customer.getId());
         assertEquals("Franciszek", customer.getFirstName());
         assertEquals("Cyprian", customer.getLastName());
         assertEquals("franciszek@cyprian.com", customer.getEmail());
@@ -26,7 +25,7 @@ public class CustomerTest {
     @Test
     void shouldAddDebt() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         customer.addDebt(new BigDecimal("50.00"));
         customer.addDebt(new BigDecimal("25.50"));
@@ -37,7 +36,7 @@ public class CustomerTest {
     @Test
     void shouldPayPartOfDebt() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         customer.addDebt(new BigDecimal("100.00"));
         customer.payDebt(new BigDecimal("35.50"));
@@ -48,7 +47,7 @@ public class CustomerTest {
     @Test
     void shouldPayEntireDebt() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         customer.addDebt(new BigDecimal("100.00"));
         customer.payDebt(new BigDecimal("100.00"));
@@ -59,7 +58,7 @@ public class CustomerTest {
     @Test
     void shouldDeactivateCustomer() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         customer.deactivate();
 
@@ -69,7 +68,7 @@ public class CustomerTest {
     @Test
     void shouldActivateDeactivatedCustomer() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
         customer.deactivate();
 
         customer.activate();
@@ -80,7 +79,7 @@ public class CustomerTest {
     @Test
     void shouldChangeFirstName() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         customer.changeFirstName("Adam  ");
 
@@ -91,7 +90,7 @@ public class CustomerTest {
     @Test
     void shouldRejectBlankFirstName() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         assertThrows(IllegalArgumentException.class, () -> customer.changeFirstName("  "));
         assertEquals("Franciszek", customer.getFirstName());
@@ -100,7 +99,7 @@ public class CustomerTest {
     @Test
     void shouldRejectNullFirstName() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         assertThrows(IllegalArgumentException.class, () -> customer.changeFirstName(null));
         assertEquals("Franciszek", customer.getFirstName());
@@ -109,7 +108,7 @@ public class CustomerTest {
     @Test
     void shouldChangeLastName() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         customer.changeLastName("  Nowak");
 
@@ -120,7 +119,7 @@ public class CustomerTest {
     @Test
     void shouldRejectBlankLastName() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         assertThrows(IllegalArgumentException.class, () -> customer.changeLastName("  "));
         assertEquals("Cyprian", customer.getLastName());
@@ -129,7 +128,7 @@ public class CustomerTest {
     @Test
     void shouldRejectNullLastName() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         assertThrows(IllegalArgumentException.class, () -> customer.changeLastName(null));
         assertEquals("Cyprian", customer.getLastName());
@@ -138,7 +137,7 @@ public class CustomerTest {
     @Test
     void shouldChangeEmail() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         customer.changeEmail("  test@example.com");
 
@@ -149,7 +148,7 @@ public class CustomerTest {
     @Test
     void shouldRejectBlankEmail() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         assertThrows(IllegalArgumentException.class, () -> customer.changeEmail("  "));
         assertEquals("franciszek@cyprian.com", customer.getEmail());
@@ -158,7 +157,7 @@ public class CustomerTest {
     @Test
     void shouldRejectNullEmail() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         assertThrows(IllegalArgumentException.class, () -> customer.changeEmail(null));
         assertEquals("franciszek@cyprian.com", customer.getEmail());
@@ -167,7 +166,7 @@ public class CustomerTest {
     @Test
     void shouldChangePhoneNumber() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         customer.changePhoneNumber("  +48 857 231 423   ");
 
@@ -178,7 +177,7 @@ public class CustomerTest {
     @Test
     void shouldRejectBlankPhoneNumber() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         assertThrows(IllegalArgumentException.class, () -> customer.changePhoneNumber("  "));
         assertEquals("+48 777 222 333", customer.getPhoneNumber());
@@ -187,7 +186,7 @@ public class CustomerTest {
     @Test
     void shouldRejectNullPhoneNumber() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         assertThrows(IllegalArgumentException.class, () -> customer.changePhoneNumber(null));
         assertEquals("+48 777 222 333", customer.getPhoneNumber());
@@ -197,7 +196,7 @@ public class CustomerTest {
     void shouldChangeAddress() {
         Address oldAddress = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
         Address newAddress = new Address("Zachodnia", "330", "20", "Kielce", "70-223", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", oldAddress);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", oldAddress);
 
         customer.changeAddress(newAddress);
 
@@ -215,7 +214,7 @@ public class CustomerTest {
     @Test
     void shouldRejectNullAddress() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         assertThrows(IllegalArgumentException.class, () -> customer.changeAddress(null));
 
@@ -230,7 +229,7 @@ public class CustomerTest {
     @Test
     void shouldActivateInactiveCustomer() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
         customer.deactivate();
 
         assertFalse(customer.isActive());
@@ -243,7 +242,7 @@ public class CustomerTest {
     @Test
     void shouldRejectActivationOfActiveCustomer() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         CustomerAlreadyActiveException exception = assertThrows(CustomerAlreadyActiveException.class, customer::activate);
         assertEquals("Cannot activate already active customer.", exception.getMessage());
@@ -253,7 +252,7 @@ public class CustomerTest {
     @Test
     void shouldDeactivateActiveCustomerWithoutDebt() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
         assertTrue(customer.isActive());
 
         customer.deactivate();
@@ -264,7 +263,7 @@ public class CustomerTest {
     @Test
     void shouldRejectDeactivationOfInactiveCustomer() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
         assertTrue(customer.isActive());
 
         customer.deactivate();
@@ -281,7 +280,7 @@ public class CustomerTest {
     @Test
     void shouldRejectDeactivationOfCustomerWithDebt() {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
         assertTrue(customer.isActive());
         customer.addDebt(new BigDecimal("100.00"));
 

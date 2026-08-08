@@ -3,9 +3,9 @@ package com.mbugajski.logistics.customer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.json.JsonMapper;
 import java.util.List;
@@ -30,8 +30,11 @@ public class CustomerControllerTest {
     @Test
     void shouldReturnAllCustomers() throws Exception {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer1 = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
-        Customer customer2 = new Customer(2L, "Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+        Customer customer1 = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer2 = new Customer("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+
+        ReflectionTestUtils.setField(customer1, "id", 1L);
+        ReflectionTestUtils.setField(customer2, "id", 2L);
 
         when(customerService.findAll()).thenReturn(List.of(customer1, customer2));
 
@@ -47,7 +50,9 @@ public class CustomerControllerTest {
     @Test
     void shouldReturnCustomerById() throws Exception {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer1 = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer1 = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+
+        ReflectionTestUtils.setField(customer1, "id", 1L);
 
         when(customerService.findById(1L)).thenReturn(customer1);
 
@@ -73,11 +78,13 @@ public class CustomerControllerTest {
     @Test
     void shouldCreateCustomer() throws Exception {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer customer1 = new Customer(1L, "Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer customer1 = new Customer("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
         CreateCustomerRequest customerRequest = createCustomerRequest("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333");
         CreateAddressRequest addressRequest = createValidAddressRequest();
 
         customerRequest.setAddress(addressRequest);
+
+        ReflectionTestUtils.setField(customer1, "id", 1L);
 
         when(customerService.create(any(CreateCustomerRequest.class))).thenReturn(customer1);
 
@@ -176,10 +183,12 @@ public class CustomerControllerTest {
     @Test
     void shouldReturnOkWhenCustomerIsPartiallyUpdated() throws Exception {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer updatedCustomer = new Customer(1L, "Franciszek", "Kowalski", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer updatedCustomer = new Customer("Franciszek", "Kowalski", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         UpdateCustomerRequest updateRequest = new UpdateCustomerRequest();
         updateRequest.setLastName("Kowalski");
+
+        ReflectionTestUtils.setField(updatedCustomer, "id", 1L);
 
         when(customerService.update(eq(1L), any(UpdateCustomerRequest.class))).thenReturn(updatedCustomer);
 
@@ -272,10 +281,12 @@ public class CustomerControllerTest {
     @Test
     void shouldReturnOkWhenCustomerEmailIsUpdated() throws Exception {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer updatedCustomer = new Customer(1L, "Franciszek", "Kowalski", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer updatedCustomer = new Customer("Franciszek", "Kowalski", "franciszek@cyprian.com", "+48 777 222 333", address);
 
         UpdateCustomerRequest updateRequest = new UpdateCustomerRequest();
         updateRequest.setEmail("franciszek@cyprian.com");
+
+        ReflectionTestUtils.setField(updatedCustomer, "id", 1L);
 
         when(customerService.update(eq(1L), any(UpdateCustomerRequest.class))).thenReturn(updatedCustomer);
 
@@ -350,7 +361,9 @@ public class CustomerControllerTest {
     @Test
     void shouldReturnOkWhenCustomerIsActivated() throws Exception {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer activeCustomer = new Customer(1L, "Franciszek", "Kowalski", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer activeCustomer = new Customer("Franciszek", "Kowalski", "franciszek@cyprian.com", "+48 777 222 333", address);
+
+        ReflectionTestUtils.setField(activeCustomer, "id", 1L);
 
         when(customerService.activate(1L)).thenReturn(activeCustomer);
 
@@ -375,8 +388,10 @@ public class CustomerControllerTest {
     @Test
     void shouldReturnOkWhenCustomerIsDeactivated() throws Exception {
         Address address = new Address("Wschodnia", "130", "15", "Łódź", "90-266", "Poland");
-        Customer inactiveCustomer = new Customer(1L, "Franciszek", "Kowalski", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Customer inactiveCustomer = new Customer("Franciszek", "Kowalski", "franciszek@cyprian.com", "+48 777 222 333", address);
         inactiveCustomer.deactivate();
+
+        ReflectionTestUtils.setField(inactiveCustomer, "id", 1L);
 
         when(customerService.deactivate(1L)).thenReturn(inactiveCustomer);
 

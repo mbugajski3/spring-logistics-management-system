@@ -1,27 +1,44 @@
 package com.mbugajski.logistics.customer;
 
+import jakarta.persistence.*;
 import lombok.Getter;
-
 import java.math.BigDecimal;
 
+@Entity
+@Table(name = "customers")
 @Getter
 public class Customer {
 
-    private final long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
     private String firstName;
+
+    @Column(nullable = false)
     private String lastName;
+
+    @Column(nullable = false, unique = true)
     private String email;
+
+    @Column(nullable = false)
     private String phoneNumber;
+
+    @ManyToOne
+    @JoinColumn(name = "address_id", nullable = false)
     private Address address;
-    private BigDecimal debt;
-    private boolean active;
 
-    public Customer(long id, String firstName, String lastName, String email, String phoneNumber, Address address) {
-        if (id <= 0) {
-            throw new IllegalArgumentException("ID must be greater than 0.");
-        }
-        this.id = id;
+    @Column(nullable = false,precision = 10, scale = 2)
+    private BigDecimal debt = new BigDecimal("0.00");
 
+    @Column(nullable = false)
+    private boolean active = true;
+
+    protected Customer() {
+    }
+
+    public Customer(String firstName, String lastName, String email, String phoneNumber, Address address) {
         if (firstName == null || firstName.isBlank()) {
             throw new IllegalArgumentException("First name cannot be empty.");
         }
