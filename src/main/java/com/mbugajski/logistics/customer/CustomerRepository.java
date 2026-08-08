@@ -1,61 +1,7 @@
 package com.mbugajski.logistics.customer;
 
-import org.springframework.stereotype.Repository;
-import java.util.*;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-@Repository
-public class CustomerRepository {
-
-    private final Map<Long, Customer> customers = new HashMap<>();
-    private long idCounter = 1L;
-
-    public Customer create(String firstName, String lastName, String email, String phoneNumber, Address address) {
-        Customer customer = new Customer(idCounter, firstName, lastName, email, phoneNumber, address);
-        customers.put(customer.getId(), customer);
-        idCounter++;
-
-        return customer;
-    }
-
-    public Optional<Customer> findById(long customerId) {
-        if (customerId <= 0) {
-            throw new IllegalArgumentException("Customer ID cannot be 0 or below.");
-        }
-
-        return Optional.ofNullable(customers.get(customerId));
-    }
-
-    public List<Customer> findAll() {
-        return new ArrayList<>(customers.values());
-    }
-
-    public boolean existsByEmail(String email) {
-        if (email == null || email.isBlank()) {
-            throw new IllegalArgumentException("Email cannot be null or empty.");
-        }
-
-        String cleanEmail = email.trim();
-
-        for (Customer customer : customers.values()) {
-            if (cleanEmail.equalsIgnoreCase(customer.getEmail())) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public boolean deleteById(long customerId) {
-        if (customerId <= 0) {
-            throw new IllegalArgumentException("Customer ID cannot be 0 or below.");
-        }
-
-        if (customers.containsKey(customerId)) {
-            customers.remove(customerId);
-
-            return true;
-        }
-
-        return false;
-    }
+public interface CustomerRepository extends JpaRepository<Customer, Long> {
+    boolean existsByEmail(String email);
 }

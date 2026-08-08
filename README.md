@@ -48,6 +48,10 @@ simple frontend for interacting with the API.
 - **Java 21** — application language
 - **Spring Boot** — application configuration and runtime
 - **Spring Web MVC** — REST controllers and HTTP request handling
+- **Spring Data JPA** — database persistence and repository abstraction
+- **Hibernate** — JPA implementation and ORM
+- **PostgreSQL** — relational database used by the application
+- **H2** — embedded database used in persistence tests
 - **Jakarta Bean Validation** — request data validation
 - **Maven** — dependency management and build automation
 - **Lombok** — reduction of repetitive Java code
@@ -82,6 +86,41 @@ simple frontend for interacting with the API.
 ├── mvnw.cmd
 └── pom.xml
 ```
+## Database
+
+The application uses PostgreSQL as its main relational database.
+
+The default configuration expects a database named:
+
+```text
+logistics_management_system
+```
+
+Database credentials are provided through environment variables:
+
+```text
+DB_USERNAME
+DB_PASSWORD
+```
+
+The application connects to PostgreSQL using:
+
+
+```properties
+spring.datasource.url=jdbc:postgresql://localhost:5432/logistics_management_system
+spring.datasource.username=${DB_USERNAME}
+spring.datasource.password=${DB_PASSWORD}
+```
+
+
+Make sure PostgreSQL is running and the database exists before starting the application.
+
+For example, the database can be created with:
+```sql
+CREATE DATABASE logistics_management_system;
+```
+
+Repository tests use an embedded H2 database, so PostgreSQL is not required to run the automated test suite.
 
 ## Testing
 
@@ -110,9 +149,15 @@ Every pull request and push to the `main` branch is also verified automatically 
 
 ## Running the application
 
+Before starting the application, make sure PostgreSQL is running,
+the `logistics_management_system` database exists, and the
+`DB_USERNAME` and `DB_PASSWORD` environment variables are configured.
+
+
 ### Requirements
 
 - Java 21
+- PostgreSQL
 - Git
 
 Maven does not need to be installed separately because the project includes Maven Wrapper.
@@ -178,7 +223,7 @@ Content-Type: application/json
 
 - [x] Add a customer update endpoint
 - [x] Return `409 Conflict` when an email address is already in use
-- [ ] Replace the in-memory repository with PostgreSQL and Spring Data JPA
+- [x] Replace the in-memory repository with PostgreSQL and Spring Data JPA
 - [ ] Add shipment creation and management
 - [ ] Add courier and vehicle management
 - [ ] Implement courier and vehicle assignment workflows

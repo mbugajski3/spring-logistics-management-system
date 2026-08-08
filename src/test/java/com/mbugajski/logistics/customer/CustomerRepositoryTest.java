@@ -1,39 +1,48 @@
 package com.mbugajski.logistics.customer;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import java.util.List;
 import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.*;
 
+@DataJpaTest
 public class CustomerRepositoryTest {
 
-    private CustomerRepository testRepository;
+    @Autowired
+    private CustomerRepository customerRepository;
 
-    @BeforeEach
-    void setUp() {
-        testRepository = new CustomerRepository();
-    }
+    @Autowired
+    private AddressRepository addressRepository;
+
 
     @Test
     void shouldCreateAndFindCustomerById() {
         Address address = createValidAddress();
-        Customer customer = testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+        Address savedAddress = addressRepository.save(address);
 
-        assertEquals(1L, customer.getId());
+        Customer savedCustomer = customerRepository.save(
+                new Customer(
+                        "Adrian",
+                        "Nowak",
+                        "adrian@nowak.com",
+                        "+48 699 300 299",
+                        savedAddress
+                )
+        );
 
-        Optional<Customer> foundCustomer =
-                testRepository.findById(customer.getId());
+        Optional<Customer> found = customerRepository.findById(savedCustomer.getId());
 
-        assertTrue(foundCustomer.isPresent());
-        assertSame(customer, foundCustomer.get());
+        Customer foundCustomer = found.orElseThrow();
+
+        assertEquals("Adrian", foundCustomer.getFirstName());
+        assertEquals("Wschodnia", foundCustomer.getAddress().getStreet());
     }
 
     @Test
     void shouldReturnEmptyOptionalWhenCustomerDoesNotExist() {
-        Optional<Customer> foundCustomer = testRepository.findById(1L);
+        Optional<Customer> foundCustomer = customerRepository.findById(9999999L);
 
         assertTrue(foundCustomer.isEmpty());
     }
@@ -41,88 +50,158 @@ public class CustomerRepositoryTest {
     @Test
     void shouldReturnAllCustomers() {
         Address address = createValidAddress();
-        Customer customer1 = testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
-        Customer customer2 = testRepository.create("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Address savedAddress = addressRepository.save(address);
 
-        List<Customer> foundCustomers = testRepository.findAll();
+        Customer savedCustomer1 = customerRepository.save(
+                new Customer(
+                        "Adrian",
+                        "Nowak",
+                        "adrian@nowak.com",
+                        "+48 699 300 299",
+                        savedAddress
+                )
+        );
+
+        Customer savedCustomer2 = customerRepository.save(
+                new Customer(
+                        "Franciszek",
+                        "Cyprian",
+                        "franciszek@cyprian.com",
+                        "+48 777 222 333",
+                        savedAddress
+                )
+        );
+
+        List<Customer> foundCustomers = customerRepository.findAll();
 
         assertEquals(2, foundCustomers.size());
-        assertTrue(foundCustomers.contains(customer1));
-        assertTrue(foundCustomers.contains(customer2));
+
+        assertTrue(foundCustomers.stream()
+                .anyMatch(customer ->
+                        customer.getId().equals(savedCustomer1.getId())));
+
+        assertTrue(foundCustomers.stream()
+                .anyMatch(customer ->
+                        customer.getId().equals(savedCustomer2.getId())));
+
+        assertTrue(foundCustomers.stream()
+                .anyMatch(customer ->
+                        customer.getEmail().equals(savedCustomer1.getEmail())));
+
+        assertTrue(foundCustomers.stream()
+                .anyMatch(customer ->
+                        customer.getEmail().equals(savedCustomer2.getEmail())));
     }
 
     @Test
-    void shouldRecognizeExistingEmailIgnoringCaseAndSpaces() {
+    void shouldMatchOnlyExactEmail() {
         Address address = createValidAddress();
+        Address savedAddress = addressRepository.save(address);
 
-        testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+        customerRepository.save(
+                new Customer(
+                        "Adrian",
+                        "Nowak",
+                        "adrian@nowak.com",
+                        "+48 699 300 299",
+                        savedAddress
+                )
+        );
 
-        assertTrue(testRepository.existsByEmail("adrian@nowak.com"));
-        assertTrue(testRepository.existsByEmail("  ADRIAN@NOWAK.COM  "));
+        assertTrue(customerRepository.existsByEmail("adrian@nowak.com"));
+        assertFalse(customerRepository.existsByEmail("  ADRIAN@NOWAK.COM  "));
     }
 
     @Test
     void shouldReturnFalseWhenEmailDoesNotExist() {
         Address address = createValidAddress();
-        testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+        Address savedAddress = addressRepository.save(address);
 
-        assertFalse(testRepository.existsByEmail("unknown@mail.com"));
+        customerRepository.save(
+                new Customer(
+                        "Adrian",
+                        "Nowak",
+                        "adrian@nowak.com",
+                        "+48 699 300 299",
+                        savedAddress
+                )
+        );
+
+        assertFalse(customerRepository.existsByEmail("unknown@mail.com"));
     }
 
     @Test
     void shouldDeleteExistingCustomer() {
         Address address = createValidAddress();
-        Customer customer = testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+        Address savedAddress = addressRepository.save(address);
 
-        boolean deleted = testRepository.deleteById(customer.getId());
+        Customer savedCustomer = customerRepository.save(
+                new Customer(
+                        "Adrian",
+                        "Nowak",
+                        "adrian@nowak.com",
+                        "+48 699 300 299",
+                        savedAddress
+                )
+        );
 
-        assertTrue(deleted);
-        assertTrue(testRepository.findById(customer.getId()).isEmpty());
+        customerRepository.deleteById(savedCustomer.getId());
+
+        Optional<Customer> deletedCustomer = customerRepository.findById(savedCustomer.getId());
+
+        assertTrue(deletedCustomer.isEmpty());
     }
 
-    @Test
-    void shouldReturnFalseWhenDeletingNonExistingCustomer() {
-        boolean deleted = testRepository.deleteById(1L);
-
-        assertFalse(deleted);
-    }
 
     @Test
     void shouldReturnIndependentListFromFindAll() {
         Address address = createValidAddress();
-        testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
+        Address savedAddress = addressRepository.save(address);
 
-        List<Customer> foundCustomers = testRepository.findAll();
+        customerRepository.save(
+                new Customer(
+                        "Adrian",
+                        "Nowak",
+                        "adrian@nowak.com",
+                        "+48 699 300 299",
+                        savedAddress
+                )
+        );
+
+        List<Customer> foundCustomers = customerRepository.findAll();
         foundCustomers.clear();
 
-        assertEquals(1, testRepository.findAll().size());
+        assertEquals(1, customerRepository.findAll().size());
     }
 
     @Test
     void shouldGenerateUniqueCustomerIds() {
         Address address = createValidAddress();
-        Customer customer1 = testRepository.create("Adrian", "Nowak", "adrian@nowak.com", "+48 699 300 299", address);
-        Customer customer2 = testRepository.create("Franciszek", "Cyprian", "franciszek@cyprian.com", "+48 777 222 333", address);
+        Address savedAddress = addressRepository.save(address);
 
-        assertNotEquals(customer1.getId(), customer2.getId());
-    }
+        Customer savedCustomer1 = customerRepository.save(
+                new Customer(
+                        "Adrian",
+                        "Nowak",
+                        "adrian@nowak.com",
+                        "+48 699 300 299",
+                        savedAddress
+                )
+        );
 
-    @Test
-    void shouldRejectNonPositiveCustomerIdWhenFinding() {
-        assertThrows(IllegalArgumentException.class, () -> testRepository.findById(0L));
-        assertThrows(IllegalArgumentException.class, () -> testRepository.findById(-1L));
-    }
+        Customer savedCustomer2 = customerRepository.save(
+                new Customer(
+                        "Franciszek",
+                        "Cyprian",
+                        "franciszek@cyprian.com",
+                        "+48 777 222 333",
+                        savedAddress
+                )
+        );
 
-    @Test
-    void shouldRejectNonPositiveCustomerIdWhenDeleting() {
-        assertThrows(IllegalArgumentException.class, () -> testRepository.deleteById(0L));
-        assertThrows(IllegalArgumentException.class, () -> testRepository.deleteById(-1L));
-    }
-
-    @Test
-    void shouldRejectNullOrBlankEmail() {
-        assertThrows(IllegalArgumentException.class, () -> testRepository.existsByEmail(null));
-        assertThrows(IllegalArgumentException.class, () -> testRepository.existsByEmail("   "));
+        assertNotNull(savedCustomer1.getId());
+        assertNotNull(savedCustomer2.getId());
+        assertNotEquals(savedCustomer1.getId(), savedCustomer2.getId());
     }
 
     private Address createValidAddress() {

@@ -1,8 +1,7 @@
 package com.mbugajski.logistics.customer;
 
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
-
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -10,11 +9,14 @@ import java.util.Optional;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final AddressRepository addressRepository;
 
-    public CustomerService(CustomerRepository customerRepository) {
+    public CustomerService(CustomerRepository customerRepository, AddressRepository addressRepository) {
         this.customerRepository = customerRepository;
+        this.addressRepository = addressRepository;
     }
 
+    @Transactional
     public Customer create(CreateCustomerRequest customerRequest) {
         if (customerRequest == null) {
             throw new IllegalArgumentException("Customer cannot be null.");
@@ -39,8 +41,11 @@ public class CustomerService {
         String country = addressRequest.getCountry();
 
         Address createdAddress = new Address(street, buildingNumber, apartmentNumber, city, postalCode, country);
+        addressRepository.save(createdAddress);
 
-        return customerRepository.create(firstName, lastName, email, phoneNumber, createdAddress);
+        Customer createdCustomer = new Customer(firstName, lastName, email, phoneNumber, createdAddress);
+
+        return customerRepository.save(createdCustomer);
     }
 
     public Customer findById(long customerId) {
@@ -67,6 +72,7 @@ public class CustomerService {
         return customerRepository.findAll();
     }
 
+    @Transactional
     public Customer update(long customerId, UpdateCustomerRequest customerRequest) {
         if (customerRequest == null) {
             throw new IllegalArgumentException("Customer request cannot be null.");
@@ -85,7 +91,7 @@ public class CustomerService {
         }
 
         if (customerRequest.getEmail() != null) {
-            String requestedEmail = customerRequest.getEmail().trim();
+            String requestedEmail = customerRequest.getEmail().trim().toLowerCase();
 
             boolean emailChanged = !customer.getEmail().equalsIgnoreCase(requestedEmail);
 
@@ -122,23 +128,25 @@ public class CustomerService {
                     addressRequest.getCountry()
             );
 
-            customer.changeAddress(address);
+            Address savedAddress = addressRepository.save(address);
+
+            customer.changeAddress(savedAddress);
         }
 
-        return customer;
+        return customerRepository.save(customer);
     }
 
     public Customer activate(long customerId) {
         Customer customer = findById(customerId);
         customer.activate();
 
-        return customer;
+        return customerRepository.save(customer);
     }
 
     public Customer deactivate(long customerId) {
         Customer customer = findById(customerId);
         customer.deactivate();
 
-        return customer;
+        return customerRepository.save(customer);
     }
 }

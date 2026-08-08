@@ -1,16 +1,35 @@
 package com.mbugajski.logistics.customer;
 
+import jakarta.persistence.*;
 import lombok.Getter;
 
+@Entity
+@Table(name = "addresses")
 @Getter
 public class Address {
 
-    private final String street;
-    private final String buildingNumber;
-    private final String apartmentNumber;
-    private final String city;
-    private final String postalCode;
-    private final String country;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String street;
+
+    @Column(nullable = false)
+    private String buildingNumber;
+    private String apartmentNumber;
+
+    @Column(nullable = false)
+    private String city;
+
+    @Column(nullable = false)
+    private String postalCode;
+
+    @Column(nullable = false)
+    private String country;
+
+    protected Address() {
+    }
 
     public Address(String street, String buildingNumber, String apartmentNumber, String city, String postalCode, String country) {
         if (street == null || street.isBlank()) {
