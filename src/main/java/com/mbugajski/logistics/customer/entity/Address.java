@@ -1,4 +1,4 @@
-package com.mbugajski.logistics.customer;
+package com.mbugajski.logistics.customer.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;

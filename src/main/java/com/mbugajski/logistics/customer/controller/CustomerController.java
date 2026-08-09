@@ -1,5 +1,9 @@
-package com.mbugajski.logistics.customer;
+package com.mbugajski.logistics.customer.controller;
 
+import com.mbugajski.logistics.customer.service.CustomerService;
+import com.mbugajski.logistics.customer.dto.request.CreateCustomerRequest;
+import com.mbugajski.logistics.customer.dto.request.UpdateCustomerRequest;
+import com.mbugajski.logistics.customer.entity.Customer;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;

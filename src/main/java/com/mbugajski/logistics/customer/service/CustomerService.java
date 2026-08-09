@@ -1,5 +1,16 @@
-package com.mbugajski.logistics.customer;
+package com.mbugajski.logistics.customer.service;
 
+import com.mbugajski.logistics.customer.dto.request.CreateAddressRequest;
+import com.mbugajski.logistics.customer.dto.request.CreateCustomerRequest;
+import com.mbugajski.logistics.customer.dto.request.UpdateCustomerRequest;
+import com.mbugajski.logistics.customer.entity.Address;
+import com.mbugajski.logistics.customer.entity.Customer;
+import com.mbugajski.logistics.customer.exception.ActiveCustomerDeletionException;
+import com.mbugajski.logistics.customer.exception.CustomerEmailAlreadyExistsException;
+import com.mbugajski.logistics.customer.exception.CustomerNotFoundException;
+import com.mbugajski.logistics.customer.exception.EmptyCustomerUpdateException;
+import com.mbugajski.logistics.customer.repository.AddressRepository;
+import com.mbugajski.logistics.customer.repository.CustomerRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 import java.util.List;
