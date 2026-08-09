@@ -1,5 +1,8 @@
-package com.mbugajski.logistics.customer;
+package com.mbugajski.logistics.customer.entity;
 
+import com.mbugajski.logistics.customer.exception.CustomerAlreadyActiveException;
+import com.mbugajski.logistics.customer.exception.CustomerAlreadyInactiveException;
+import com.mbugajski.logistics.customer.exception.CustomerHasOutstandingDebtException;
 import jakarta.persistence.*;
 import lombok.Getter;
 import java.math.BigDecimal;

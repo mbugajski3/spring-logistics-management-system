@@ -1,4 +1,4 @@
-package com.mbugajski.logistics.customer;
+package com.mbugajski.logistics.customer.dto.request;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;

@@ -1,4 +1,4 @@
-package com.mbugajski.logistics.customer;
+package com.mbugajski.logistics.customer.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
@@ -23,7 +23,7 @@ public class CreateAddressRequest {
 
     @NotBlank(message = "Postal code cannot be blank.")
     private String postalCode;
-    
+
     @NotBlank(message = "Country cannot be blank.")
     private String country;
 }

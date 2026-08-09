@@ -1,5 +1,10 @@
 package com.mbugajski.logistics.customer;
 
+import com.mbugajski.logistics.customer.entity.Address;
+import com.mbugajski.logistics.customer.entity.Customer;
+import com.mbugajski.logistics.customer.exception.CustomerAlreadyActiveException;
+import com.mbugajski.logistics.customer.exception.CustomerAlreadyInactiveException;
+import com.mbugajski.logistics.customer.exception.CustomerHasOutstandingDebtException;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
