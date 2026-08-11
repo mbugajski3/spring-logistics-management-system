@@ -4,34 +4,60 @@
 
 Logistics Management System is a Spring Boot REST API designed to support the core operations of a logistics company.
 
-The project currently focuses on customer management and provides endpoints for creating customers, retrieving customer data,
-partially updating customers, changing customer status, and deleting customers. It also includes request validation, domain-specific exception handling,
-automated tests, and a continuous integration workflow.
+The application currently supports customer and shipment management. Customers can be created, retrieved, updated, activated, deactivated, and deleted according to domain rules. Shipments can be created for existing customers, persisted in PostgreSQL, priced automatically based on weight, and moved through a controlled delivery lifecycle.
 
-This is my first Spring Boot project and an important part of my backend development portfolio. I plan to develop it
-continuously as I learn new technologies and backend concepts. Each new stage of the project will reflect the skills I
-have acquired and show my progress in building increasingly complex applications.
+The shipment lifecycle currently supports the following states:
 
-The long-term goal is to extend the system with shipment creation, delivery management, courier and vehicle assignments,
-and shipment price calculation based on weight and other conditions. In the future, the project may also include a
-simple frontend for interacting with the API.
+`CREATED → READY_FOR_PICKUP → IN_TRANSIT → DELIVERED`
+
+Shipments can also be cancelled while they are in the `CREATED` or `READY_FOR_PICKUP` state.
+
+The project includes request validation, domain-specific exceptions, centralized REST error handling, DTO-based API responses, automated tests across multiple application layers, and continuous integration with GitHub Actions.
+
+This is my first Spring Boot project and an important part of my backend development portfolio. I develop it incrementally as I learn new backend technologies and architectural concepts.
+
+The next major stages of the project will focus on courier and vehicle management, shipment assignment workflows, and further integration between the different parts of the logistics domain.
 
 ## Current features
+
+### Customer management
 
 - Create a new customer
 - Retrieve a customer by ID
 - Retrieve all customers
-- Activate and deactivate customers
-- Deactivate customers only when they have no outstanding debt
-- Delete customers only when they are inactive
 - Partially update customer data
 - Update customer email with uniqueness validation
+- Activate and deactivate customers
+- Prevent deactivation when a customer has outstanding debt
+- Delete customers only when they are inactive
 - Validate customer and address data
-- Return appropriate HTTP status codes for invalid requests, conflicts, and missing customers
-- Run automated domain, repository, service, and controller tests
+
+### Shipment management
+
+- Create shipments for existing customers
+- Retrieve a shipment by ID
+- Retrieve all shipments
+- Store pickup and delivery addresses
+- Automatically calculate shipment price based on weight
+- Enforce shipment weight limits
+- Manage shipment lifecycle transitions
+- Mark shipments as ready for pickup
+- Mark shipments as in transit
+- Mark shipments as delivered
+- Cancel eligible shipments
+- Prevent invalid shipment status transitions
+- Return dedicated `ShipmentResponse` DTOs instead of exposing JPA entities directly
+
+### API and infrastructure
+
+- Persist application data with PostgreSQL and Spring Data JPA
+- Return structured API error responses
+- Handle validation errors globally with `@RestControllerAdvice`
+- Return appropriate HTTP status codes for invalid requests, conflicts, and missing resources
+- Run automated domain, mapper, repository, service, and controller tests
 - Build and test the application automatically with GitHub Actions
 
-## API endpoints
+## Customer API endpoints
 
 | Method   | Endpoint                                 | Description                    | Possible responses                                           |
 |----------|------------------------------------------|--------------------------------|--------------------------------------------------------------|
@@ -42,6 +68,18 @@ simple frontend for interacting with the API.
 | `PATCH`  | `/api/customers/{customerId}`            | Partially update customer data | `200 OK`, `400 Bad Request`, `404 Not Found`, `409 Conflict` |
 | `PATCH` | `/api/customers/{customerId}/activate`   | Activate a customer            | `200 OK`, `404 Not Found`, `409 Conflict`|
 | `PATCH` | `/api/customers/{customerId}/deactivate` | Deactivate a customer          | `200 OK`, `404 Not Found`, `409 Conflict`|
+
+## Shipment API endpoints
+
+| Method  | Endpoint                                      | Description                       | Possible responses                               |
+|---------|-----------------------------------------------|-----------------------------------|--------------------------------------------------|
+| `GET`   | `/api/shipments`                              | Retrieve all shipments            | `200 OK`                                         |
+| `GET`   | `/api/shipments/{shipmentId}`                 | Retrieve a shipment by ID         | `200 OK`, `404 Not Found`                        |
+| `POST`  | `/api/shipments`                              | Create a new shipment             | `201 Created`, `400 Bad Request`, `404 Not Found`|
+| `PATCH` | `/api/shipments/{shipmentId}/ready-for-pickup`| Mark shipment as ready for pickup | `200 OK`, `404 Not Found`, `409 Conflict`        |
+| `PATCH` | `/api/shipments/{shipmentId}/in-transit`      | Mark shipment as in transit       | `200 OK`, `404 Not Found`, `409 Conflict`        |
+| `PATCH` | `/api/shipments/{shipmentId}/delivered`       | Mark shipment as delivered        | `200 OK`, `404 Not Found`, `409 Conflict`        |
+| `PATCH` | `/api/shipments/{shipmentId}/cancelled`       | Cancel a shipment                 | `200 OK`, `404 Not Found`, `409 Conflict`        |
 
 ## Technologies
 
@@ -63,28 +101,31 @@ simple frontend for interacting with the API.
 ## Project structure
 
 ```text
-.
-├── .github/
-│   └── workflows/
-│       └── ci.yml
-├── .mvn/
-├── http/
-│   └── customer-api.http
-├── src/
-│   ├── main/
-│   │   ├── java/com/mbugajski/logistics/
-│   │   │   ├── LogisticsManagementSystemApplication.java
-│   │   │   └── customer/
-│   │   └── resources/
-│   │       └── application.properties
-│   └── test/
-│       └── java/com/mbugajski/logistics/
-├── .editorconfig
-├── .gitattributes
-├── .gitignore
-├── mvnw
-├── mvnw.cmd
-└── pom.xml
+src/main/java/com/mbugajski/logistics/
+├── address/
+│   ├── dto/
+│   ├── entity/
+│   └── repository/
+├── common/
+│   └── exception/
+├── customer/
+│   ├── controller/
+│   ├── dto/
+│   ├── entity/
+│   ├── exception/
+│   ├── repository/
+│   └── service/
+├── shipment/
+│   ├── controller/
+│   ├── dto/
+│   │   ├── request/
+│   │   └── response/
+│   ├── entity/
+│   ├── exception/
+│   ├── mapper/
+│   ├── repository/
+│   └── service/
+└── LogisticsManagementSystemApplication.java
 ```
 ## Database
 
@@ -127,10 +168,15 @@ Repository tests use an embedded H2 database, so PostgreSQL is not required to r
 The project includes automated tests for multiple application layers:
 
 - domain model validation and behavior
-- repository operations
+- shipment lifecycle rules
+- shipment price calculation
+- repository persistence
+- JPA dirty checking
 - service logic and exception handling
+- DTO mapping
 - REST controller endpoints
 - request validation
+- global API error responses
 - Spring application context startup
 
 Tests can be executed locally with Maven Wrapper:
@@ -187,10 +233,11 @@ The application starts by default at:
 http://localhost:8080
 ```
 
-The customer API is available under:
+The APIs are available under:
 
 ```text
 http://localhost:8080/api/customers
+http://localhost:8080/api/shipments
 ```
 
 ## Example requests
@@ -219,15 +266,78 @@ Content-Type: application/json
 }
 ```
 
+
+
+### Create a shipment
+
+```http
+POST http://localhost:8080/api/shipments
+Content-Type: application/json
+
+{
+  "customerId": 1,
+  "pickupAddress": {
+    "street": "Długa",
+    "buildingNumber": "10",
+    "apartmentNumber": "5",
+    "city": "Gdańsk",
+    "postalCode": "80-831",
+    "country": "Poland"
+  },
+  "deliveryAddress": {
+    "street": "Marszałkowska",
+    "buildingNumber": "25",
+    "apartmentNumber": "8",
+    "city": "Warszawa",
+    "postalCode": "00-001",
+    "country": "Poland"
+  },
+  "weight": 7.00
+}
+```
+
+
+### Example response:
+
+```json
+{
+  "id": 1,
+  "customerId": 1,
+  "customerFirstName": "Anna",
+  "customerLastName": "Kowalska",
+  "pickupAddress": {
+    "street": "Długa",
+    "buildingNumber": "10",
+    "apartmentNumber": "5",
+    "city": "Gdańsk",
+    "postalCode": "80-831",
+    "country": "Poland"
+  },
+  "deliveryAddress": {
+    "street": "Marszałkowska",
+    "buildingNumber": "25",
+    "apartmentNumber": "8",
+    "city": "Warszawa",
+    "postalCode": "00-001",
+    "country": "Poland"
+  },
+  "weight": 7.00,
+  "price": 25.00,
+  "status": "CREATED",
+  "createdAt": "2026-08-11T22:00:00"
+}
+```
+
 ## Roadmap
 
 - [x] Add a customer update endpoint
 - [x] Return `409 Conflict` when an email address is already in use
 - [x] Replace the in-memory repository with PostgreSQL and Spring Data JPA
-- [ ] Add shipment creation and management
+- [x] Add shipment creation and management
 - [ ] Add courier and vehicle management
 - [ ] Implement courier and vehicle assignment workflows
-- [ ] Calculate shipment prices based on weight and delivery conditions
+- [x] Calculate shipment prices based on weight
+- [ ] Extend shipment pricing with additional delivery conditions
 - [ ] Add Docker configuration
 - [ ] Add OpenAPI documentation
 - [ ] Create a simple frontend for interacting with the system
