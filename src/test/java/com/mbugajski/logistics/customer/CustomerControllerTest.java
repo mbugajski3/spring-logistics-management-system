@@ -1,10 +1,10 @@
 package com.mbugajski.logistics.customer;
 
 import com.mbugajski.logistics.customer.controller.CustomerController;
-import com.mbugajski.logistics.customer.dto.request.CreateAddressRequest;
+import com.mbugajski.logistics.address.dto.request.CreateAddressRequest;
 import com.mbugajski.logistics.customer.dto.request.CreateCustomerRequest;
 import com.mbugajski.logistics.customer.dto.request.UpdateCustomerRequest;
-import com.mbugajski.logistics.customer.entity.Address;
+import com.mbugajski.logistics.address.entity.Address;
 import com.mbugajski.logistics.customer.entity.Customer;
 import com.mbugajski.logistics.customer.exception.*;
 import com.mbugajski.logistics.customer.service.CustomerService;

@@ -1,5 +1,6 @@
 package com.mbugajski.logistics.customer.entity;
 
+import com.mbugajski.logistics.address.entity.Address;
 import com.mbugajski.logistics.customer.exception.CustomerAlreadyActiveException;
 import com.mbugajski.logistics.customer.exception.CustomerAlreadyInactiveException;
 import com.mbugajski.logistics.customer.exception.CustomerHasOutstandingDebtException;

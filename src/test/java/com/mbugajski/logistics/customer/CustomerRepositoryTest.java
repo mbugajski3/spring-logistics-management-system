@@ -1,8 +1,8 @@
 package com.mbugajski.logistics.customer;
 
-import com.mbugajski.logistics.customer.entity.Address;
+import com.mbugajski.logistics.address.entity.Address;
 import com.mbugajski.logistics.customer.entity.Customer;
-import com.mbugajski.logistics.customer.repository.AddressRepository;
+import com.mbugajski.logistics.address.repository.AddressRepository;
 import com.mbugajski.logistics.customer.repository.CustomerRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

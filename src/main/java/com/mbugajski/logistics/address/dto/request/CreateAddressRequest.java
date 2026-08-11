@@ -1,4 +1,4 @@
-package com.mbugajski.logistics.customer.dto.request;
+package com.mbugajski.logistics.address.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
