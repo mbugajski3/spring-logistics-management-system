@@ -3,6 +3,7 @@ package com.mbugajski.logistics.shipment;
 import com.mbugajski.logistics.address.entity.Address;
 import com.mbugajski.logistics.customer.entity.Customer;
 import com.mbugajski.logistics.shipment.entity.Shipment;
+import com.mbugajski.logistics.shipment.entity.ShipmentStatus;
 import com.mbugajski.logistics.shipment.exception.*;
 import org.junit.jupiter.api.Test;
 

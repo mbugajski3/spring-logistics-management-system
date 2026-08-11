@@ -8,6 +8,7 @@ import com.mbugajski.logistics.customer.exception.CustomerNotFoundException;
 import com.mbugajski.logistics.customer.repository.CustomerRepository;
 import com.mbugajski.logistics.shipment.dto.request.CreateShipmentRequest;
 import com.mbugajski.logistics.shipment.entity.Shipment;
+import com.mbugajski.logistics.shipment.entity.ShipmentStatus;
 import com.mbugajski.logistics.shipment.exception.ShipmentInvalidStatusException;
 import com.mbugajski.logistics.shipment.exception.ShipmentNotFoundException;
 import com.mbugajski.logistics.shipment.repository.ShipmentRepository;

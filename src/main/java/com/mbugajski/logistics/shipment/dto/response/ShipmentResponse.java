@@ -1,9 +1,8 @@
 package com.mbugajski.logistics.shipment.dto.response;
 
-import com.mbugajski.logistics.shipment.ShipmentStatus;
+import com.mbugajski.logistics.shipment.entity.ShipmentStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

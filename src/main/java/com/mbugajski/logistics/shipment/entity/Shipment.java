@@ -2,7 +2,6 @@ package com.mbugajski.logistics.shipment.entity;
 
 import com.mbugajski.logistics.address.entity.Address;
 import com.mbugajski.logistics.customer.entity.Customer;
-import com.mbugajski.logistics.shipment.ShipmentStatus;
 import com.mbugajski.logistics.shipment.exception.*;
 import jakarta.persistence.*;
 import lombok.Getter;

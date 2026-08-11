@@ -5,6 +5,7 @@ import com.mbugajski.logistics.customer.entity.Customer;
 import com.mbugajski.logistics.address.repository.AddressRepository;
 import com.mbugajski.logistics.customer.repository.CustomerRepository;
 import com.mbugajski.logistics.shipment.entity.Shipment;
+import com.mbugajski.logistics.shipment.entity.ShipmentStatus;
 import com.mbugajski.logistics.shipment.repository.ShipmentRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
