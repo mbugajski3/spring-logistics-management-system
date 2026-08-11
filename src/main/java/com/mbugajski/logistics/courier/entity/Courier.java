@@ -1,5 +1,6 @@
 package com.mbugajski.logistics.courier.entity;
 
+import com.mbugajski.logistics.courier.exception.CourierInvalidStateException;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -52,7 +53,7 @@ public class Courier {
 
     public void deactivate() {
         if (!this.active || !this.available) {
-            throw new IllegalStateException("Only active courier can be deactivated.");
+            throw new CourierInvalidStateException("Courier must be active and not busy to deactivate.");
         }
         this.active = false;
         this.available = false;
@@ -61,7 +62,7 @@ public class Courier {
 
     public void activate() {
         if (this.active) {
-            throw new IllegalStateException("Only inactive courier can be activated.");
+            throw new CourierInvalidStateException("Only inactive courier can be activated.");
         }
         this.active = true;
         this.available = true;
@@ -69,14 +70,14 @@ public class Courier {
 
     public void markAsBusy() {
         if (!this.active || !this.available) {
-            throw new IllegalStateException("Courier must be active and available to mark as busy.");
+            throw new CourierInvalidStateException("Courier must be active and available to mark as busy.");
         }
         this.available = false;
     }
 
     public void markAsAvailable() {
         if (!this.active || this.available) {
-            throw new IllegalStateException("Courier must be active and busy to mark as available.");
+            throw new CourierInvalidStateException("Courier must be active and busy to mark as available.");
         }
         this.available = true;
     }

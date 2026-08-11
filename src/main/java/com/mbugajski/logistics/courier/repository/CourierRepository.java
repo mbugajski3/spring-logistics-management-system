@@ -1,4 +1,7 @@
 package com.mbugajski.logistics.courier.repository;
 
-public class CourierRepository {
+import com.mbugajski.logistics.courier.entity.Courier;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface CourierRepository extends JpaRepository<Courier, Long> {
 }
