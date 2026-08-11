@@ -1,5 +1,6 @@
 package com.mbugajski.logistics.customer.dto.request;
 
+import com.mbugajski.logistics.address.dto.request.CreateAddressRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;

@@ -1,0 +1,122 @@
+package com.mbugajski.logistics.shipment.service;
+
+import com.mbugajski.logistics.address.dto.request.CreateAddressRequest;
+import com.mbugajski.logistics.address.entity.Address;
+import com.mbugajski.logistics.address.repository.AddressRepository;
+import com.mbugajski.logistics.customer.entity.Customer;
+import com.mbugajski.logistics.customer.exception.CustomerNotFoundException;
+import com.mbugajski.logistics.customer.repository.CustomerRepository;
+import com.mbugajski.logistics.shipment.dto.request.CreateShipmentRequest;
+import com.mbugajski.logistics.shipment.entity.Shipment;
+import com.mbugajski.logistics.shipment.exception.ShipmentNotFoundException;
+import com.mbugajski.logistics.shipment.repository.ShipmentRepository;
+import jakarta.transaction.Transactional;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class ShipmentService {
+
+    private final ShipmentRepository shipmentRepository;
+    private final CustomerRepository customerRepository;
+    private final AddressRepository addressRepository;
+
+    public ShipmentService(ShipmentRepository shipmentRepository, CustomerRepository customerRepository, AddressRepository addressRepository) {
+        this.shipmentRepository = shipmentRepository;
+        this.customerRepository = customerRepository;
+        this.addressRepository = addressRepository;
+    }
+
+    @Transactional
+    public Shipment create(CreateShipmentRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("CreateShipmentRequest cannot be null.");
+        }
+
+        Long customerIdFromRequest = request.getCustomerId();
+
+        Customer customerFound = customerRepository
+                .findById(customerIdFromRequest)
+                .orElseThrow(() -> new CustomerNotFoundException(customerIdFromRequest));
+
+        CreateAddressRequest requestPickupAddress = request.getPickupAddress();
+        CreateAddressRequest requestDeliveryAddress = request.getDeliveryAddress();
+
+        Address createdPickupAddress = mapToAddress(requestPickupAddress);
+
+        Address createdDeliveryAddress = mapToAddress(requestDeliveryAddress);
+
+        BigDecimal shipmentWeight = request.getWeight();
+
+        Address pickupAddress = addressRepository.save(createdPickupAddress);
+        Address deliveryAddress = addressRepository.save(createdDeliveryAddress);
+
+        Shipment createdShipment = new Shipment(customerFound, pickupAddress, deliveryAddress, shipmentWeight);
+
+        return shipmentRepository.save(createdShipment);
+    }
+
+    private Address mapToAddress(CreateAddressRequest request) {
+        return new Address(
+                request.getStreet(),
+                request.getBuildingNumber(),
+                request.getApartmentNumber(),
+                request.getCity(),
+                request.getPostalCode(),
+                request.getCountry()
+        );
+    }
+
+    public Shipment findById(Long id) {
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException("Shipment id must be greater than 0.");
+        }
+
+        return shipmentRepository
+                .findById(id)
+                .orElseThrow(() -> new ShipmentNotFoundException(id));
+    }
+
+    public List<Shipment> findAll() {
+        return shipmentRepository.findAll();
+    }
+
+    @Transactional
+    public Shipment markAsReadyForPickup(Long id) {
+        Shipment shipmentFound = findById(id);
+
+        shipmentFound.markAsReadyForPickup();
+
+        return shipmentFound;
+    }
+
+    @Transactional
+    public Shipment markAsInTransit(Long id) {
+        Shipment shipmentFound = findById(id);
+
+        shipmentFound.markAsInTransit();
+
+        return shipmentFound;
+    }
+
+    @Transactional
+    public Shipment markAsDelivered(Long id) {
+        Shipment shipmentFound = findById(id);
+
+        shipmentFound.markAsDelivered();
+
+        return shipmentFound;
+    }
+
+    @Transactional
+    public Shipment markAsCancelled(Long id) {
+        Shipment shipmentFound = findById(id);
+
+        shipmentFound.markAsCancelled();
+
+        return shipmentFound;
+    }
+}

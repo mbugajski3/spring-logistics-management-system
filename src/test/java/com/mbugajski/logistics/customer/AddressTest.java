@@ -1,6 +1,6 @@
 package com.mbugajski.logistics.customer;
 
-import com.mbugajski.logistics.customer.entity.Address;
+import com.mbugajski.logistics.address.entity.Address;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
