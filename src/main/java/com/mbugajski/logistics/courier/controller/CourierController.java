@@ -32,4 +32,11 @@ public class CourierController {
                 .status(HttpStatus.CREATED)
                 .body(courierResponse);
     }
+
+    @GetMapping("/{courierId}")
+    public CourierResponse findById(@PathVariable Long courierId) {
+        Courier courier = courierService.findById(courierId);
+
+        return CourierMapper.toResponse(courier);
+    }
 }

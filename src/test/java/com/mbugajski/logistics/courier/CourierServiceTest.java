@@ -2,6 +2,7 @@ package com.mbugajski.logistics.courier;
 
 import com.mbugajski.logistics.courier.dto.request.CreateCourierRequest;
 import com.mbugajski.logistics.courier.entity.Courier;
+import com.mbugajski.logistics.courier.exception.CourierNotFoundException;
 import com.mbugajski.logistics.courier.exception.CourierPhoneNumberAlreadyExistsException;
 import com.mbugajski.logistics.courier.repository.CourierRepository;
 import com.mbugajski.logistics.courier.service.CourierService;
@@ -10,6 +11,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -68,6 +71,50 @@ public class CourierServiceTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> courierService.create(null));
 
         assertEquals("Courier request cannot be null.", exception.getMessage());
+
+        verifyNoInteractions(courierRepository);
+    }
+
+    @Test
+    void shouldReturnCourierById() {
+        Courier courier = new Courier("Adrian", "Nowak", "+48 677 354 242");
+
+        when(courierRepository.findById(1L)).thenReturn(Optional.of(courier));
+
+        Courier foundCourier = courierService.findById(1L);
+
+        assertEquals("Adrian", foundCourier.getFirstName());
+        assertEquals("Nowak", foundCourier.getLastName());
+        assertEquals("+48 677 354 242", foundCourier.getPhoneNumber());
+
+        verify(courierRepository).findById(1L);
+    }
+
+    @Test
+    void shouldThrowWhenCourierNotFound() {
+        when(courierRepository.findById(1L)).thenReturn(Optional.empty());
+
+        CourierNotFoundException exception = assertThrows(CourierNotFoundException.class, () -> courierService.findById(1L));
+
+        assertEquals("Courier with id 1 not found.", exception.getMessage());
+
+        verify(courierRepository).findById(1L);
+    }
+
+    @Test
+    void shouldThrowWhenCourierIdIsZero() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> courierService.findById(0L));
+
+        assertEquals("ID cannot be null, 0 or below.", exception.getMessage());
+
+        verifyNoInteractions(courierRepository);
+    }
+
+    @Test
+    void shouldThrowWhenCourierIdIsNull() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> courierService.findById(null));
+
+        assertEquals("ID cannot be null, 0 or below.", exception.getMessage());
 
         verifyNoInteractions(courierRepository);
     }

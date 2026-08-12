@@ -2,6 +2,7 @@ package com.mbugajski.logistics.courier.service;
 
 import com.mbugajski.logistics.courier.dto.request.CreateCourierRequest;
 import com.mbugajski.logistics.courier.entity.Courier;
+import com.mbugajski.logistics.courier.exception.CourierNotFoundException;
 import com.mbugajski.logistics.courier.exception.CourierPhoneNumberAlreadyExistsException;
 import com.mbugajski.logistics.courier.repository.CourierRepository;
 import org.springframework.stereotype.Service;
@@ -31,5 +32,15 @@ public class CourierService {
         Courier mappedCourier = new Courier(requestFirstName, requestLastName, requestPhoneNumber);
 
         return courierRepository.save(mappedCourier);
+    }
+
+    public Courier findById(Long courierId) {
+        if (courierId == null || courierId <= 0) {
+            throw new IllegalArgumentException("ID cannot be null, 0 or below.");
+        }
+
+        return courierRepository
+                .findById(courierId)
+                .orElseThrow(() -> new CourierNotFoundException(courierId));
     }
 }
