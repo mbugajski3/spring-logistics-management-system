@@ -17,7 +17,7 @@ public class CourierService {
 
     public Courier create(CreateCourierRequest courierRequest) {
         if (courierRequest == null) {
-            throw new IllegalArgumentException("Courier request cannot be empty.");
+            throw new IllegalArgumentException("Courier request cannot be null.");
         }
 
         String requestFirstName = courierRequest.getFirstName().trim();
