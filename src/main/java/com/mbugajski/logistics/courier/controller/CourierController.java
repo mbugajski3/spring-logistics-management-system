@@ -23,6 +23,15 @@ public class CourierController {
         this.courierService = courierService;
     }
 
+    @GetMapping
+    public List<CourierResponse> findAll() {
+        return courierService.findAll()
+                .stream()
+                .map(CourierMapper::toResponse)
+                .toList();
+    }
+
+
     @PostMapping
     public ResponseEntity<CourierResponse> create(@RequestBody @Valid CreateCourierRequest courierRequest) {
         Courier courier = courierService.create(courierRequest);
@@ -36,6 +45,34 @@ public class CourierController {
     @GetMapping("/{courierId}")
     public CourierResponse findById(@PathVariable Long courierId) {
         Courier courier = courierService.findById(courierId);
+
+        return CourierMapper.toResponse(courier);
+    }
+
+    @PatchMapping("/{courierId}/busy")
+    public CourierResponse markAsBusy(@PathVariable Long courierId) {
+        Courier courier = courierService.markAsBusy(courierId);
+
+        return CourierMapper.toResponse(courier);
+    }
+
+    @PatchMapping("/{courierId}/available")
+    public CourierResponse markAsAvailable(@PathVariable Long courierId) {
+        Courier courier = courierService.markAsAvailable(courierId);
+
+        return CourierMapper.toResponse(courier);
+    }
+
+    @PatchMapping("/{courierId}/deactivate")
+    public CourierResponse deactivate(@PathVariable Long courierId) {
+        Courier courier = courierService.deactivate(courierId);
+
+        return CourierMapper.toResponse(courier);
+    }
+
+    @PatchMapping("/{courierId}/activate")
+    public CourierResponse activate(@PathVariable Long courierId) {
+        Courier courier = courierService.activate(courierId);
 
         return CourierMapper.toResponse(courier);
     }

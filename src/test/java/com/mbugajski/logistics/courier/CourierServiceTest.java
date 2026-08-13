@@ -2,6 +2,7 @@ package com.mbugajski.logistics.courier;
 
 import com.mbugajski.logistics.courier.dto.request.CreateCourierRequest;
 import com.mbugajski.logistics.courier.entity.Courier;
+import com.mbugajski.logistics.courier.exception.CourierInvalidStateException;
 import com.mbugajski.logistics.courier.exception.CourierNotFoundException;
 import com.mbugajski.logistics.courier.exception.CourierPhoneNumberAlreadyExistsException;
 import com.mbugajski.logistics.courier.repository.CourierRepository;
@@ -117,5 +118,133 @@ public class CourierServiceTest {
         assertEquals("ID cannot be null, 0 or below.", exception.getMessage());
 
         verifyNoInteractions(courierRepository);
+    }
+
+    @Test
+    void shouldMarkCourierAsBusy() {
+        Courier courier = new Courier("Adrian", "Nowak", "+48 677 354 242");
+
+        when(courierRepository.findById(1L)).thenReturn(Optional.of(courier));
+
+        Courier courierFound = courierService.markAsBusy(1L);
+
+        assertFalse(courierFound.isAvailable());
+        assertTrue(courierFound.isActive());
+
+        verify(courierRepository).findById(1L);
+        verify(courierRepository, never()).save(any(Courier.class));
+    }
+
+    @Test
+    void shouldMarkCourierAsAvailable() {
+        Courier courier = new Courier("Adrian", "Nowak", "+48 677 354 242");
+        courier.markAsBusy();
+
+        when(courierRepository.findById(1L)).thenReturn(Optional.of(courier));
+
+        Courier courierFound = courierService.markAsAvailable(1L);
+
+        assertTrue(courierFound.isAvailable());
+        assertTrue(courierFound.isActive());
+
+        verify(courierRepository).findById(1L);
+        verify(courierRepository, never()).save(any(Courier.class));
+    }
+
+    @Test
+    void shouldDeactivateCourier() {
+        Courier courier = new Courier("Adrian", "Nowak", "+48 677 354 242");
+
+        when(courierRepository.findById(1L)).thenReturn(Optional.of(courier));
+
+        Courier courierFound = courierService.deactivate(1L);
+
+        assertFalse(courierFound.isAvailable());
+        assertFalse(courierFound.isActive());
+
+        verify(courierRepository).findById(1L);
+        verify(courierRepository, never()).save(any(Courier.class));
+    }
+
+    @Test
+    void shouldActivateCourier() {
+        Courier courier = new Courier("Adrian", "Nowak", "+48 677 354 242");
+        courier.deactivate();
+
+        when(courierRepository.findById(1L)).thenReturn(Optional.of(courier));
+
+        Courier courierFound = courierService.activate(1L);
+
+        assertTrue(courierFound.isAvailable());
+        assertTrue(courierFound.isActive());
+
+        verify(courierRepository).findById(1L);
+        verify(courierRepository, never()).save(any(Courier.class));
+    }
+
+    @Test
+    void shouldThrowWhenMarkingAlreadyBusyCourierAsBusy() {
+        Courier courier = new Courier("Adrian", "Nowak", "+48 677 354 242");
+        courier.markAsBusy();
+
+        when(courierRepository.findById(1L)).thenReturn(Optional.of(courier));
+
+        CourierInvalidStateException exception = assertThrows(CourierInvalidStateException.class, () -> courierService.markAsBusy(1L));
+
+        assertEquals("Courier must be active and available to mark as busy.", exception.getMessage());
+        assertFalse(courier.isAvailable());
+        assertTrue(courier.isActive());
+
+        verify(courierRepository).findById(1L);
+        verify(courierRepository, never()).save(any(Courier.class));
+    }
+
+    @Test
+    void shouldThrowWhenMarkingAvailableCourierAsAvailable() {
+        Courier courier = new Courier("Adrian", "Nowak", "+48 677 354 242");
+
+        when(courierRepository.findById(1L)).thenReturn(Optional.of(courier));
+
+        CourierInvalidStateException exception = assertThrows(CourierInvalidStateException.class, () -> courierService.markAsAvailable(1L));
+
+        assertEquals("Courier must be active and busy to mark as available.", exception.getMessage());
+        assertTrue(courier.isAvailable());
+        assertTrue(courier.isActive());
+
+        verify(courierRepository).findById(1L);
+        verify(courierRepository, never()).save(any(Courier.class));
+    }
+
+    @Test
+    void shouldThrowWhenDeactivatingBusyCourier() {
+        Courier courier = new Courier("Adrian", "Nowak", "+48 677 354 242");
+        courier.markAsBusy();
+
+        when(courierRepository.findById(1L)).thenReturn(Optional.of(courier));
+
+        CourierInvalidStateException exception = assertThrows(CourierInvalidStateException.class, () -> courierService.deactivate(1L));
+
+        assertEquals("Courier must be active and not busy to deactivate.", exception.getMessage());
+        assertFalse(courier.isAvailable());
+        assertTrue(courier.isActive());
+
+        verify(courierRepository).findById(1L);
+        verify(courierRepository, never()).save(any(Courier.class));
+    }
+
+    @Test
+    void shouldThrowWhenActivatingAlreadyActiveCourier() {
+        Courier courier = new Courier("Adrian", "Nowak", "+48 677 354 242");
+
+        when(courierRepository.findById(1L)).thenReturn(Optional.of(courier));
+
+        CourierInvalidStateException exception = assertThrows(CourierInvalidStateException.class, () -> courierService.activate(1L));
+
+        assertEquals("Only inactive courier can be activated.", exception.getMessage());
+        assertTrue(courier.isAvailable());
+        assertTrue(courier.isActive());
+
+        verify(courierRepository).findById(1L);
+        verify(courierRepository, never()).save(any(Courier.class));
     }
 }

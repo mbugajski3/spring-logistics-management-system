@@ -12,6 +12,7 @@ import com.mbugajski.logistics.shipment.exception.ShipmentInvalidStatusException
 import com.mbugajski.logistics.shipment.exception.ShipmentNotFoundException;
 import com.mbugajski.logistics.shipment.repository.ShipmentRepository;
 import com.mbugajski.logistics.shipment.service.ShipmentService;
+import com.mbugajski.logistics.shipment.entity.ShipmentStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

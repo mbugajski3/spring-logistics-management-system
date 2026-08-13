@@ -4,6 +4,7 @@ import com.mbugajski.logistics.common.exception.GlobalExceptionHandler;
 import com.mbugajski.logistics.courier.controller.CourierController;
 import com.mbugajski.logistics.courier.dto.request.CreateCourierRequest;
 import com.mbugajski.logistics.courier.entity.Courier;
+import com.mbugajski.logistics.courier.exception.CourierInvalidStateException;
 import com.mbugajski.logistics.courier.exception.CourierNotFoundException;
 import com.mbugajski.logistics.courier.service.CourierService;
 import org.junit.jupiter.api.Test;
@@ -19,10 +20,10 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.sql.Ref;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -151,5 +152,101 @@ public class CourierControllerTest {
                 .andExpect(jsonPath("$.timestamp").exists());
 
         verify(courierService).findById(1L);
+    }
+
+    @Test
+    void shouldChangeStatusToBusy() throws Exception {
+        Courier courier = new Courier("Adrian", "Nowak", "+48 677 354 242");
+        courier.markAsBusy();
+
+        ReflectionTestUtils.setField(courier, "id", 1L);
+
+        when(courierService.markAsBusy(1L)).thenReturn(courier);
+
+        mockMvc.perform(patch("/api/couriers/1/busy"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.firstName").value("Adrian"))
+                .andExpect(jsonPath("$.lastName").value("Nowak"))
+                .andExpect(jsonPath("$.phoneNumber").value("+48 677 354 242"))
+                .andExpect(jsonPath("$.active").value(true))
+                .andExpect(jsonPath("$.available").value(false));
+
+        verify(courierService).markAsBusy(1L);
+    }
+
+    @Test
+    void shouldChangeStatusToAvailable() throws Exception {
+        Courier courier = new Courier("Adrian", "Nowak", "+48 677 354 242");
+
+        ReflectionTestUtils.setField(courier, "id", 1L);
+
+        when(courierService.markAsAvailable(1L)).thenReturn(courier);
+
+        mockMvc.perform(patch("/api/couriers/1/available"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.firstName").value("Adrian"))
+                .andExpect(jsonPath("$.lastName").value("Nowak"))
+                .andExpect(jsonPath("$.phoneNumber").value("+48 677 354 242"))
+                .andExpect(jsonPath("$.active").value(true))
+                .andExpect(jsonPath("$.available").value(true));
+
+        verify(courierService).markAsAvailable(1L);
+    }
+
+    @Test
+    void shouldDeactivateCourier() throws Exception {
+        Courier courier = new Courier("Adrian", "Nowak", "+48 677 354 242");
+        courier.deactivate();
+
+        ReflectionTestUtils.setField(courier, "id", 1L);
+
+        when(courierService.deactivate(1L)).thenReturn(courier);
+
+        mockMvc.perform(patch("/api/couriers/1/deactivate"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.firstName").value("Adrian"))
+                .andExpect(jsonPath("$.lastName").value("Nowak"))
+                .andExpect(jsonPath("$.phoneNumber").value("+48 677 354 242"))
+                .andExpect(jsonPath("$.active").value(false))
+                .andExpect(jsonPath("$.available").value(false));
+
+        verify(courierService).deactivate(1L);
+    }
+
+    @Test
+    void shouldActivateCourier() throws Exception {
+        Courier courier = new Courier("Adrian", "Nowak", "+48 677 354 242");
+
+        ReflectionTestUtils.setField(courier, "id", 1L);
+
+        when(courierService.activate(1L)).thenReturn(courier);
+
+        mockMvc.perform(patch("/api/couriers/1/activate"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.firstName").value("Adrian"))
+                .andExpect(jsonPath("$.lastName").value("Nowak"))
+                .andExpect(jsonPath("$.phoneNumber").value("+48 677 354 242"))
+                .andExpect(jsonPath("$.active").value(true))
+                .andExpect(jsonPath("$.available").value(true));
+
+        verify(courierService).activate(1L);
+    }
+
+    @Test
+    void shouldThrowWhenMakingBusyUnavailableCourier() throws Exception {
+        when(courierService.markAsBusy(1L)).thenThrow(new CourierInvalidStateException("Courier must be active and available to mark as busy."));
+
+        mockMvc.perform(patch("/api/couriers/1/busy"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(HttpStatus.CONFLICT.value()))
+                .andExpect(jsonPath("$.error").value(HttpStatus.CONFLICT.name()))
+                .andExpect(jsonPath("$.message").value("Courier must be active and available to mark as busy."))
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        verify(courierService).markAsBusy(1L);
     }
 }

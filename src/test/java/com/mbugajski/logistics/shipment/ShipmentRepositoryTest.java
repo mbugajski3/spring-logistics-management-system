@@ -6,6 +6,7 @@ import com.mbugajski.logistics.address.repository.AddressRepository;
 import com.mbugajski.logistics.customer.repository.CustomerRepository;
 import com.mbugajski.logistics.shipment.entity.Shipment;
 import com.mbugajski.logistics.shipment.repository.ShipmentRepository;
+import com.mbugajski.logistics.shipment.entity.ShipmentStatus;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

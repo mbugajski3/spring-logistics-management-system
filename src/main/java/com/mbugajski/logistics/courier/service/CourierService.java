@@ -5,7 +5,10 @@ import com.mbugajski.logistics.courier.entity.Courier;
 import com.mbugajski.logistics.courier.exception.CourierNotFoundException;
 import com.mbugajski.logistics.courier.exception.CourierPhoneNumberAlreadyExistsException;
 import com.mbugajski.logistics.courier.repository.CourierRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class CourierService {
@@ -42,5 +45,41 @@ public class CourierService {
         return courierRepository
                 .findById(courierId)
                 .orElseThrow(() -> new CourierNotFoundException(courierId));
+    }
+
+    public List<Courier> findAll() {
+        return courierRepository.findAll();
+    }
+
+    @Transactional
+    public Courier markAsBusy(Long courierId) {
+        Courier courierFound = findById(courierId);
+        courierFound.markAsBusy();
+
+        return courierFound;
+    }
+
+    @Transactional
+    public Courier markAsAvailable(Long courierId) {
+        Courier courierFound = findById(courierId);
+        courierFound.markAsAvailable();
+
+        return courierFound;
+    }
+
+    @Transactional
+    public Courier deactivate(Long courierId) {
+        Courier courierFound = findById(courierId);
+        courierFound.deactivate();
+
+        return courierFound;
+    }
+
+    @Transactional
+    public Courier activate(Long courierId) {
+        Courier courierFound = findById(courierId);
+        courierFound.activate();
+
+        return courierFound;
     }
 }
