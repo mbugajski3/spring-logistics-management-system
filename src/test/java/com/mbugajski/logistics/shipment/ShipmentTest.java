@@ -5,7 +5,7 @@ import com.mbugajski.logistics.customer.entity.Customer;
 import com.mbugajski.logistics.shipment.entity.Shipment;
 import com.mbugajski.logistics.shipment.exception.*;
 import org.junit.jupiter.api.Test;
-
+import com.mbugajski.logistics.shipment.entity.ShipmentStatus;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.*;

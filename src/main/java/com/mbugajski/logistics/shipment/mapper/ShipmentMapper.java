@@ -3,6 +3,8 @@ package com.mbugajski.logistics.shipment.mapper;
 import com.mbugajski.logistics.shipment.dto.response.AddressResponse;
 import com.mbugajski.logistics.shipment.dto.response.ShipmentResponse;
 import com.mbugajski.logistics.shipment.entity.Shipment;
+import com.mbugajski.logistics.shipment.entity.ShipmentStatus;
+
 
 public class ShipmentMapper {
 

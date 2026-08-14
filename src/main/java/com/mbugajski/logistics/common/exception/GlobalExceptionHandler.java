@@ -1,5 +1,7 @@
 package com.mbugajski.logistics.common.exception;
 
+import com.mbugajski.logistics.courier.exception.CourierInvalidStateException;
+import com.mbugajski.logistics.courier.exception.CourierNotFoundException;
 import com.mbugajski.logistics.shipment.exception.*;
 import org.springframework.cglib.core.Local;
 import org.springframework.http.HttpStatus;
@@ -79,6 +81,28 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.name(),
                 message,
+                LocalDateTime.now()
+        );
+    }
+
+    @ExceptionHandler(CourierNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiErrorResponse handleCourierNotFound(CourierNotFoundException exception) {
+        return new ApiErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.name(),
+                exception.getMessage(),
+                LocalDateTime.now()
+        );
+    }
+
+    @ExceptionHandler(CourierInvalidStateException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiErrorResponse handleCourierInvalidState(CourierInvalidStateException exception) {
+        return new ApiErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.name(),
+                exception.getMessage(),
                 LocalDateTime.now()
         );
     }

@@ -2,21 +2,14 @@ package com.mbugajski.logistics.shipment;
 
 import com.mbugajski.logistics.address.dto.request.CreateAddressRequest;
 import com.mbugajski.logistics.address.entity.Address;
-import com.mbugajski.logistics.address.repository.AddressRepository;
-import com.mbugajski.logistics.customer.controller.CustomerController;
 import com.mbugajski.logistics.customer.entity.Customer;
-import com.mbugajski.logistics.customer.repository.CustomerRepository;
 import com.mbugajski.logistics.shipment.controller.ShipmentController;
 import com.mbugajski.logistics.shipment.dto.request.CreateShipmentRequest;
-import com.mbugajski.logistics.shipment.dto.response.ShipmentResponse;
 import com.mbugajski.logistics.shipment.entity.Shipment;
 import com.mbugajski.logistics.shipment.exception.ShipmentInvalidStatusException;
 import com.mbugajski.logistics.shipment.exception.ShipmentNotFoundException;
-import com.mbugajski.logistics.shipment.mapper.ShipmentMapper;
-import com.mbugajski.logistics.shipment.repository.ShipmentRepository;
 import com.mbugajski.logistics.shipment.service.ShipmentService;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
@@ -24,10 +17,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.json.JsonMapper;
-
 import java.math.BigDecimal;
 import java.util.List;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;

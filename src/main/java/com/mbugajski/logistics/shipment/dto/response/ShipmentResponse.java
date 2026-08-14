@@ -1,7 +1,6 @@
 package com.mbugajski.logistics.shipment.dto.response;
 
-import com.mbugajski.logistics.shipment.ShipmentStatus;
-import lombok.AllArgsConstructor;
+import com.mbugajski.logistics.shipment.entity.ShipmentStatus;import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 

@@ -4,19 +4,21 @@
 
 Logistics Management System is a Spring Boot REST API designed to support the core operations of a logistics company.
 
-The application currently supports customer and shipment management. Customers can be created, retrieved, updated, activated, deactivated, and deleted according to domain rules. Shipments can be created for existing customers, persisted in PostgreSQL, priced automatically based on weight, and moved through a controlled delivery lifecycle.
+The application currently supports customer, shipment, and courier management. Customers can be created, retrieved, updated, activated, deactivated, and deleted according to domain rules. Shipments can be created for existing customers, persisted in PostgreSQL, priced automatically based on weight, and moved through a controlled delivery lifecycle. Couriers can be created, retrieved, activated, deactivated, and moved between available and busy states according to domain rules.
 
 The shipment lifecycle currently supports the following states:
 
-`CREATED → READY_FOR_PICKUP → IN_TRANSIT → DELIVERED`
+CREATED → READY_FOR_PICKUP → IN_TRANSIT → DELIVERED
 
-Shipments can also be cancelled while they are in the `CREATED` or `READY_FOR_PICKUP` state.
+Shipments can also be cancelled while they are in the CREATED or READY_FOR_PICKUP state.
+
+Courier state transitions are also controlled by the domain model. Active and available couriers can be marked as busy, busy couriers can become available again, and only eligible couriers can be activated or deactivated.
 
 The project includes request validation, domain-specific exceptions, centralized REST error handling, DTO-based API responses, automated tests across multiple application layers, and continuous integration with GitHub Actions.
 
 This is my first Spring Boot project and an important part of my backend development portfolio. I develop it incrementally as I learn new backend technologies and architectural concepts.
 
-The next major stages of the project will focus on courier and vehicle management, shipment assignment workflows, and further integration between the different parts of the logistics domain.
+The next major stages of the project will focus on vehicle management, shipment assignment workflows, and further integration between shipments, couriers, and vehicles.
 
 ## Current features
 
@@ -47,6 +49,22 @@ The next major stages of the project will focus on courier and vehicle managemen
 - Cancel eligible shipments
 - Prevent invalid shipment status transitions
 - Return dedicated `ShipmentResponse` DTOs instead of exposing JPA entities directly
+
+### Courier management
+
+- Create a new courier
+- Retrieve a courier by ID
+- Retrieve all couriers
+- Store courier data in PostgreSQL
+- Enforce unique courier phone numbers
+- Activate and deactivate couriers
+- Mark couriers as busy
+- Mark busy couriers as available
+- Prevent invalid courier state transitions
+- Prevent busy couriers from being deactivated
+- Return dedicated CourierResponse DTOs instead of exposing JPA entities directly
+- Return 404 Not Found for missing couriers
+- Return 409 Conflict for invalid courier state transitions
 
 ### API and infrastructure
 
@@ -81,6 +99,19 @@ The next major stages of the project will focus on courier and vehicle managemen
 | `PATCH` | `/api/shipments/{shipmentId}/delivered`       | Mark shipment as delivered        | `200 OK`, `404 Not Found`, `409 Conflict`        |
 | `PATCH` | `/api/shipments/{shipmentId}/cancelled`       | Cancel a shipment                 | `200 OK`, `404 Not Found`, `409 Conflict`        |
 
+## Courier API endpoints
+
+| Method  | Endpoint                               | Description                | Possible responses                               |
+|---------|----------------------------------------|----------------------------|--------------------------------------------------|
+| `GET`   | `/api/couriers`                        | Retrieve all couriers      | `200 OK`                                         |
+| `GET`   | `/api/couriers/{courierId}`            | Retrieve a courier by ID   | `200 OK`, `404 Not Found`                        |
+| `POST`  | `/api/couriers`                        | Create a new courier       | `201 Created`, `400 Bad Request`, `409 Conflict` |
+| `PATCH` | `/api/couriers/{courierId}/busy`       | Mark courier as busy       | `200 OK`, `404 Not Found`, `409 Conflict`        |
+| `PATCH` | `/api/couriers/{courierId}/available`  | Mark courier as available | `200 OK`, `404 Not Found`, `409 Conflict`        |
+| `PATCH` | `/api/couriers/{courierId}/deactivate` | Deactivate a courier  | `200 OK`, `404 Not Found`, `409 Conflict`        |
+| `PATCH` | `/api/couriers/{courierId}/activate`   | Activate a courier      | `200 OK`, `404 Not Found`, `409 Conflict`        |
+
+
 ## Technologies
 
 - **Java 21** — application language
@@ -113,6 +144,16 @@ src/main/java/com/mbugajski/logistics/
 │   ├── dto/
 │   ├── entity/
 │   ├── exception/
+│   ├── repository/
+│   └── service/
+├── courier/
+│   ├── controller/
+│   ├── dto/
+│   │   ├── request/
+│   │   └── response/
+│   ├── entity/
+│   ├── exception/
+│   ├── mapper/
 │   ├── repository/
 │   └── service/
 ├── shipment/
@@ -178,6 +219,11 @@ The project includes automated tests for multiple application layers:
 - request validation
 - global API error responses
 - Spring application context startup
+- courier domain state transition rules
+- courier persistence and unique phone number constraints
+- courier JPA dirty checking
+- courier service behavior and exception handling
+- courier REST endpoints
 
 Tests can be executed locally with Maven Wrapper:
 
@@ -238,6 +284,7 @@ The APIs are available under:
 ```text
 http://localhost:8080/api/customers
 http://localhost:8080/api/shipments
+http://localhost:8080/api/couriers
 ```
 
 ## Example requests
@@ -334,7 +381,8 @@ Content-Type: application/json
 - [x] Return `409 Conflict` when an email address is already in use
 - [x] Replace the in-memory repository with PostgreSQL and Spring Data JPA
 - [x] Add shipment creation and management
-- [ ] Add courier and vehicle management
+- [x] Add courier management
+- [ ] Add vehicle management
 - [ ] Implement courier and vehicle assignment workflows
 - [x] Calculate shipment prices based on weight
 - [ ] Extend shipment pricing with additional delivery conditions
