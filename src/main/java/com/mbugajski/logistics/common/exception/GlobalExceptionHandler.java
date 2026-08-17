@@ -3,6 +3,10 @@ package com.mbugajski.logistics.common.exception;
 import com.mbugajski.logistics.courier.exception.CourierInvalidStateException;
 import com.mbugajski.logistics.courier.exception.CourierNotFoundException;
 import com.mbugajski.logistics.shipment.exception.*;
+import com.mbugajski.logistics.vehicle.exception.VehicleIllegalArgumentException;
+import com.mbugajski.logistics.vehicle.exception.VehicleInvalidStateException;
+import com.mbugajski.logistics.vehicle.exception.VehicleNotFoundException;
+import com.mbugajski.logistics.vehicle.exception.VehicleRegistrationNumberAlreadyExistsException;
 import org.springframework.cglib.core.Local;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -105,5 +109,48 @@ public class GlobalExceptionHandler {
                 exception.getMessage(),
                 LocalDateTime.now()
         );
+    }
+
+    @ExceptionHandler(VehicleIllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiErrorResponse handleIllegalArgument(VehicleIllegalArgumentException exception) {
+        return new ApiErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                HttpStatus.BAD_REQUEST.name(),
+                exception.getMessage(),
+                LocalDateTime.now()
+        );
+    }
+
+    @ExceptionHandler(VehicleNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiErrorResponse handleCourierNotFound(VehicleNotFoundException exception) {
+        return new ApiErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.name(),
+                exception.getMessage(),
+                LocalDateTime.now()
+        );
+    }
+
+    @ExceptionHandler(VehicleInvalidStateException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiErrorResponse handleCourierInvalidState(VehicleInvalidStateException exception) {
+        return new ApiErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.name(),
+                exception.getMessage(),
+                LocalDateTime.now()
+        );
+    }
+
+    @ExceptionHandler(VehicleRegistrationNumberAlreadyExistsException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiErrorResponse handleVehicleRegistrationNumberAlreadyExists(VehicleRegistrationNumberAlreadyExistsException exception) {
+        return new ApiErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.name(),
+                exception.getMessage(),
+                LocalDateTime.now());
     }
 }

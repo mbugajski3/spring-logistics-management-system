@@ -1,7 +1,9 @@
 package com.mbugajski.logistics.vehicle;
 
 import com.mbugajski.logistics.vehicle.dto.request.CreateVehicleRequest;
+import com.mbugajski.logistics.vehicle.dto.request.UpdateVehicleStatusRequest;
 import com.mbugajski.logistics.vehicle.entity.Vehicle;
+import com.mbugajski.logistics.vehicle.entity.VehicleStatus;
 import com.mbugajski.logistics.vehicle.entity.VehicleType;
 import com.mbugajski.logistics.vehicle.exception.VehicleIllegalArgumentException;
 import com.mbugajski.logistics.vehicle.exception.VehicleInvalidStateException;
@@ -293,5 +295,201 @@ public class VehicleServiceTest {
 
         verify(vehicleRepository).findById(1L);
         verify(vehicleRepository, never()).save(any(Vehicle.class));
+    }
+
+    @Test
+    void shouldUpdateVehicleStatusFromAvailableToBusy() {
+        Vehicle vehicle = new Vehicle("Ford", "Ducato", "GD 8032D", VehicleType.VAN, new BigDecimal("120.00"));
+
+        UpdateVehicleStatusRequest request = new UpdateVehicleStatusRequest();
+        request.setStatus(VehicleStatus.BUSY);
+
+        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle));
+
+        Vehicle updatedVehicle = vehicleService.updateStatus(1L, request);
+
+        assertTrue(updatedVehicle.isActive());
+        assertFalse(updatedVehicle.isAvailable());
+
+        verify(vehicleRepository).findById(1L);
+        verify(vehicleRepository, never()).save(any(Vehicle.class));
+    }
+
+    @Test
+    void shouldUpdateVehicleStatusFromBusyToAvailable() {
+        Vehicle vehicle = new Vehicle("Ford", "Ducato", "GD 8032D", VehicleType.VAN, new BigDecimal("120.00"));
+        vehicle.markAsBusy();
+
+        UpdateVehicleStatusRequest request = new UpdateVehicleStatusRequest();
+        request.setStatus(VehicleStatus.AVAILABLE);
+
+        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle));
+
+        Vehicle updatedVehicle = vehicleService.updateStatus(1L, request);
+
+        assertTrue(updatedVehicle.isActive());
+        assertTrue(updatedVehicle.isAvailable());
+
+        verify(vehicleRepository).findById(1L);
+        verify(vehicleRepository, never()).save(any(Vehicle.class));
+    }
+
+    @Test
+    void shouldUpdateVehicleStatusFromInactiveToAvailable() {
+        Vehicle vehicle = new Vehicle("Ford", "Ducato", "GD 8032D", VehicleType.VAN, new BigDecimal("120.00"));
+        vehicle.deactivate();
+
+        assertFalse(vehicle.isActive());
+        assertFalse(vehicle.isAvailable());
+
+        UpdateVehicleStatusRequest request = new UpdateVehicleStatusRequest();
+        request.setStatus(VehicleStatus.AVAILABLE);
+
+        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle));
+
+        Vehicle updatedVehicle = vehicleService.updateStatus(1L, request);
+
+        assertTrue(updatedVehicle.isActive());
+        assertTrue(updatedVehicle.isAvailable());
+
+        verify(vehicleRepository).findById(1L);
+        verify(vehicleRepository, never()).save(any(Vehicle.class));
+    }
+
+    @Test
+    void shouldUpdateVehicleStatusFromAvailableToInactive() {
+        Vehicle vehicle = new Vehicle("Ford", "Ducato", "GD 8032D", VehicleType.VAN, new BigDecimal("120.00"));
+
+        UpdateVehicleStatusRequest request = new UpdateVehicleStatusRequest();
+        request.setStatus(VehicleStatus.INACTIVE);
+
+        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle));
+
+        Vehicle updatedVehicle = vehicleService.updateStatus(1L, request);
+
+        assertFalse(updatedVehicle.isActive());
+        assertFalse(updatedVehicle.isAvailable());
+
+        verify(vehicleRepository).findById(1L);
+        verify(vehicleRepository, never()).save(any(Vehicle.class));
+    }
+
+    @Test
+    void shouldThrowWhenUpdatingAvailableVehicleToAvailable() {
+        Vehicle vehicle = new Vehicle("Ford", "Ducato", "GD 8032D", VehicleType.VAN, new BigDecimal("120.00"));
+
+        UpdateVehicleStatusRequest request = new UpdateVehicleStatusRequest();
+        request.setStatus(VehicleStatus.AVAILABLE);
+
+        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle));
+
+        VehicleInvalidStateException exception = assertThrows(VehicleInvalidStateException.class, () -> vehicleService.updateStatus(1L, request));
+
+        assertEquals("Vehicle is already available.", exception.getMessage());
+        assertTrue(vehicle.isActive());
+        assertTrue(vehicle.isAvailable());
+
+        verify(vehicleRepository).findById(1L);
+        verify(vehicleRepository, never()).save(any(Vehicle.class));
+    }
+
+    @Test
+    void shouldThrowWhenUpdatingBusyVehicleToBusy() {
+        Vehicle vehicle = new Vehicle("Ford", "Ducato", "GD 8032D", VehicleType.VAN, new BigDecimal("120.00"));
+        vehicle.markAsBusy();
+
+        UpdateVehicleStatusRequest request = new UpdateVehicleStatusRequest();
+        request.setStatus(VehicleStatus.BUSY);
+
+        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle));
+
+        VehicleInvalidStateException exception = assertThrows(VehicleInvalidStateException.class, () -> vehicleService.updateStatus(1L, request));
+
+        assertEquals("Vehicle is already busy.", exception.getMessage());
+        assertTrue(vehicle.isActive());
+        assertFalse(vehicle.isAvailable());
+
+        verify(vehicleRepository).findById(1L);
+        verify(vehicleRepository, never()).save(any(Vehicle.class));
+    }
+
+    @Test
+    void shouldThrowWhenUpdatingInactiveVehicleToInactive() {
+        Vehicle vehicle = new Vehicle("Ford", "Ducato", "GD 8032D", VehicleType.VAN, new BigDecimal("120.00"));
+        vehicle.deactivate();
+
+        UpdateVehicleStatusRequest request = new UpdateVehicleStatusRequest();
+        request.setStatus(VehicleStatus.INACTIVE);
+
+        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle));
+
+        VehicleInvalidStateException exception = assertThrows(VehicleInvalidStateException.class, () -> vehicleService.updateStatus(1L, request));
+
+        assertEquals("Vehicle is already inactive.", exception.getMessage());
+        assertFalse(vehicle.isActive());
+        assertFalse(vehicle.isAvailable());
+
+        verify(vehicleRepository).findById(1L);
+        verify(vehicleRepository, never()).save(any(Vehicle.class));
+    }
+
+    @Test
+    void shouldThrowWhenUpdatingInactiveVehicleToBusy() {
+        Vehicle vehicle = new Vehicle("Ford", "Ducato", "GD 8032D", VehicleType.VAN, new BigDecimal("120.00"));
+        vehicle.deactivate();
+
+        UpdateVehicleStatusRequest request = new UpdateVehicleStatusRequest();
+        request.setStatus(VehicleStatus.BUSY);
+
+        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle));
+
+        VehicleInvalidStateException exception = assertThrows(VehicleInvalidStateException.class, () -> vehicleService.updateStatus(1L, request));
+        assertEquals("Inactive vehicle cannot be marked as busy.", exception.getMessage());
+        assertFalse(vehicle.isActive());
+        assertFalse(vehicle.isAvailable());
+
+        verify(vehicleRepository).findById(1L);
+        verify(vehicleRepository, never()).save(any(Vehicle.class));
+    }
+
+    @Test
+    void shouldThrowWhenUpdatingBusyVehicleToInactive() {
+        Vehicle vehicle = new Vehicle("Ford", "Ducato", "GD 8032D", VehicleType.VAN, new BigDecimal("120.00"));
+        vehicle.markAsBusy();
+
+        UpdateVehicleStatusRequest request = new UpdateVehicleStatusRequest();
+        request.setStatus(VehicleStatus.INACTIVE);
+
+        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle));
+
+        VehicleInvalidStateException exception = assertThrows(VehicleInvalidStateException.class, () -> vehicleService.updateStatus(1L, request));
+
+        assertEquals("Busy vehicle cannot be deactivated.", exception.getMessage());
+        assertTrue(vehicle.isActive());
+        assertFalse(vehicle.isAvailable());
+
+        verify(vehicleRepository).findById(1L);
+        verify(vehicleRepository, never()).save(any(Vehicle.class));
+    }
+
+    @Test
+    void shouldThrowWhenUpdateStatusRequestIsNull() {
+        VehicleIllegalArgumentException exception = assertThrows(VehicleIllegalArgumentException.class, () -> vehicleService.updateStatus(1L, null));
+
+        assertEquals("Update status request cannot be null.", exception.getMessage());
+
+        verifyNoInteractions(vehicleRepository);
+    }
+
+    @Test
+    void shouldThrowWhenVehicleStatusIsNull() {
+        UpdateVehicleStatusRequest request = new UpdateVehicleStatusRequest();
+        request.setStatus(null);
+
+        VehicleIllegalArgumentException exception = assertThrows(VehicleIllegalArgumentException.class, () -> vehicleService.updateStatus(1L, request));
+
+        assertEquals("Vehicle status cannot be null.", exception.getMessage());
+
+        verifyNoInteractions(vehicleRepository);
     }
 }

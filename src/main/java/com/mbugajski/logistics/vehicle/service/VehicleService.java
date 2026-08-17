@@ -1,9 +1,12 @@
 package com.mbugajski.logistics.vehicle.service;
 
 import com.mbugajski.logistics.vehicle.dto.request.CreateVehicleRequest;
+import com.mbugajski.logistics.vehicle.dto.request.UpdateVehicleStatusRequest;
 import com.mbugajski.logistics.vehicle.entity.Vehicle;
+import com.mbugajski.logistics.vehicle.entity.VehicleStatus;
 import com.mbugajski.logistics.vehicle.entity.VehicleType;
 import com.mbugajski.logistics.vehicle.exception.VehicleIllegalArgumentException;
+import com.mbugajski.logistics.vehicle.exception.VehicleInvalidStateException;
 import com.mbugajski.logistics.vehicle.exception.VehicleNotFoundException;
 import com.mbugajski.logistics.vehicle.exception.VehicleRegistrationNumberAlreadyExistsException;
 import com.mbugajski.logistics.vehicle.repository.VehicleRepository;
@@ -89,5 +92,56 @@ public class VehicleService {
         foundVehicle.activate();
 
         return foundVehicle;
+    }
+
+    @Transactional
+    public Vehicle updateStatus(Long vehicleId, UpdateVehicleStatusRequest request) {
+        if (request == null) {
+            throw new VehicleIllegalArgumentException("Update status request cannot be null.");
+        }
+
+        if (request.getStatus() == null) {
+            throw new VehicleIllegalArgumentException("Vehicle status cannot be null.");
+        }
+
+        Vehicle vehicle = findById(vehicleId);
+
+        switch (request.getStatus()) {
+            case AVAILABLE -> {
+                if (!vehicle.isActive()) {
+                    vehicle.activate();
+                } else if (!vehicle.isAvailable()) {
+                    vehicle.markAsAvailable();
+                } else {
+                    throw new VehicleInvalidStateException("Vehicle is already available.");
+                }
+            }
+
+            case BUSY -> {
+                if (!vehicle.isActive()) {
+                    throw new VehicleInvalidStateException("Inactive vehicle cannot be marked as busy.");
+                }
+
+                if (!vehicle.isAvailable()) {
+                    throw new VehicleInvalidStateException("Vehicle is already busy.");
+                }
+
+                vehicle.markAsBusy();
+            }
+
+            case INACTIVE -> {
+                if (!vehicle.isActive()) {
+                    throw new VehicleInvalidStateException("Vehicle is already inactive.");
+                }
+
+                if (!vehicle.isAvailable()) {
+                    throw new VehicleInvalidStateException("Busy vehicle cannot be deactivated.");
+                }
+
+                vehicle.deactivate();
+            }
+        }
+
+        return vehicle;
     }
 }
