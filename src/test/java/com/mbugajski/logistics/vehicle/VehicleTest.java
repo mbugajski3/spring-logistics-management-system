@@ -94,6 +94,13 @@ public class VehicleTest {
     }
 
     @Test
+    void shouldThrowWhenMaxLoadIsAboveLimit() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> new Vehicle("Ford", "Transit", "GD 0406H", VehicleType.VAN, new BigDecimal("1600.01")));
+
+        assertEquals("Maximum load cannot be over 1600 kg.", exception.getMessage());
+    }
+
+    @Test
     void shouldMarkAsBusy() {
         Vehicle vehicle = new Vehicle("Ford", "Transit", "GD 0406H", VehicleType.VAN, new BigDecimal("30"));
 
