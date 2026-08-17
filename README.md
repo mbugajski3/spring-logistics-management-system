@@ -4,8 +4,7 @@
 
 Logistics Management System is a Spring Boot REST API designed to support the core operations of a logistics company.
 
-The application currently supports customer, shipment, and courier management. Customers can be created, retrieved, updated, activated, deactivated, and deleted according to domain rules. Shipments can be created for existing customers, persisted in PostgreSQL, priced automatically based on weight, and moved through a controlled delivery lifecycle. Couriers can be created, retrieved, activated, deactivated, and moved between available and busy states according to domain rules.
-
+The application currently supports customer, shipment, courier, and vehicle management. Customers can be created, retrieved, updated, activated, deactivated, and deleted according to domain rules. Shipments can be created for existing customers, persisted in PostgreSQL, priced automatically based on weight, and moved through a controlled delivery lifecycle. Couriers can be created, retrieved, activated, deactivated, and moved between available and busy states according to domain rules. Vehicles can be created, retrieved, validated by registration number and maximum load, and moved between available, busy, and inactive states.
 The shipment lifecycle currently supports the following states:
 
 CREATED → READY_FOR_PICKUP → IN_TRANSIT → DELIVERED
@@ -18,8 +17,7 @@ The project includes request validation, domain-specific exceptions, centralized
 
 This is my first Spring Boot project and an important part of my backend development portfolio. I develop it incrementally as I learn new backend technologies and architectural concepts.
 
-The next major stages of the project will focus on vehicle management, shipment assignment workflows, and further integration between shipments, couriers, and vehicles.
-
+The next major stages of the project will focus on shipment assignment workflows and further integration between shipments, couriers, and vehicles.
 ## Current features
 
 ### Customer management
@@ -66,6 +64,32 @@ The next major stages of the project will focus on vehicle management, shipment 
 - Return 404 Not Found for missing couriers
 - Return 409 Conflict for invalid courier state transitions
 
+### Vehicle Management
+
+- Creating vehicles
+- Retrieving all vehicles
+- Retrieving a vehicle by ID
+- Unique registration number validation
+- Maximum load validation
+- Vehicle type support
+- Vehicle availability and activity management
+- Transactional status updates using JPA dirty checking
+
+#### Vehicle statuses
+
+Vehicles can have one of the following logical statuses:
+
+- `AVAILABLE` — active and available
+- `BUSY` — active but unavailable
+- `INACTIVE` — inactive and unavailable
+
+Supported status transitions:
+
+- `AVAILABLE → BUSY`
+- `BUSY → AVAILABLE`
+- `AVAILABLE → INACTIVE`
+- `INACTIVE → AVAILABLE`
+
 ### API and infrastructure
 
 - Persist application data with PostgreSQL and Spring Data JPA
@@ -110,6 +134,16 @@ The next major stages of the project will focus on vehicle management, shipment 
 | `PATCH` | `/api/couriers/{courierId}/available`  | Mark courier as available | `200 OK`, `404 Not Found`, `409 Conflict`        |
 | `PATCH` | `/api/couriers/{courierId}/deactivate` | Deactivate a courier  | `200 OK`, `404 Not Found`, `409 Conflict`        |
 | `PATCH` | `/api/couriers/{courierId}/activate`   | Activate a courier      | `200 OK`, `404 Not Found`, `409 Conflict`        |
+
+## Vehicle API endpoints
+
+| Method  | Endpoint                               | Description              | Possible responses                                          |
+|---------|----------------------------------------|--------------------------|-------------------------------------------------------------|
+| `GET`   | `/api/vehicles`                        | Retrieve all vehicles    | `200 OK`                                                    |
+| `GET`   | `/api/vehicles/{vehicleId}`            | Retrieve a vehicle by ID | `200 OK`, `404 Not Found`                                   |
+| `POST`  | `/api/vehicles`                        | Create a new vehicle     | `201 Created`, `400 Bad Request`, `409 Conflict`            |
+| `PATCH` | `/api/vehicles/{vehicleId}/status`     | Update vehicle status    | `200 OK`, `404 Not Found`, `409 Conflict`, `400 Bad Request`|
+
 
 
 ## Technologies
@@ -157,6 +191,16 @@ src/main/java/com/mbugajski/logistics/
 │   ├── repository/
 │   └── service/
 ├── shipment/
+│   ├── controller/
+│   ├── dto/
+│   │   ├── request/
+│   │   └── response/
+│   ├── entity/
+│   ├── exception/
+│   ├── mapper/
+│   ├── repository/
+│   └── service/
+├── vehicle/
 │   ├── controller/
 │   ├── dto/
 │   │   ├── request/
@@ -224,6 +268,11 @@ The project includes automated tests for multiple application layers:
 - courier JPA dirty checking
 - courier service behavior and exception handling
 - courier REST endpoints
+- vehicle domain validation and state transition tests
+- vehicle repository persistence and unique registration number tests
+- JPA dirty checking tests
+- vehicle service tests
+- vehicle REST controller and validation tests
 
 Tests can be executed locally with Maven Wrapper:
 
@@ -285,6 +334,7 @@ The APIs are available under:
 http://localhost:8080/api/customers
 http://localhost:8080/api/shipments
 http://localhost:8080/api/couriers
+http://localhost:8080/api/vehicles
 ```
 
 ## Example requests
@@ -312,8 +362,6 @@ Content-Type: application/json
   }
 }
 ```
-
-
 
 ### Create a shipment
 
@@ -343,8 +391,23 @@ Content-Type: application/json
 }
 ```
 
+### Create vehicle
 
-### Example response:
+```http
+POST http://localhost:8080/api/vehicles
+Content-Type: application/json
+
+{
+  "brand": "Ford",
+  "model": "Transit",
+  "registrationNumber": "GD 8032D",
+  "vehicleType": "VAN",
+  "maximumLoad": 120.00
+}
+```
+
+
+### Example shipment created response:
 
 ```json
 {
@@ -375,6 +438,46 @@ Content-Type: application/json
 }
 ```
 
+### Example vehicle created response
+
+```json
+{
+  "id": 1,
+  "brand": "Ford",
+  "model": "Transit",
+  "registrationNumber": "GD 8032D",
+  "vehicleType": "VAN",
+  "maximumLoad": 120.00,
+  "active": true,
+  "available": true
+}
+```
+
+### Update vehicle status
+
+```http
+PATCH http://localhost:8080/api/vehicles/1/status
+Content-Type: application/json
+
+{
+  "status": "BUSY"
+}
+```
+### Example update status response
+
+```json
+{
+  "id": 1,
+  "brand": "Ford",
+  "model": "Transit",
+  "registrationNumber": "GD 8032D",
+  "vehicleType": "VAN",
+  "maximumLoad": 120.00,
+  "active": true,
+  "available": false
+}
+```
+
 ## Roadmap
 
 - [x] Add a customer update endpoint
@@ -382,7 +485,7 @@ Content-Type: application/json
 - [x] Replace the in-memory repository with PostgreSQL and Spring Data JPA
 - [x] Add shipment creation and management
 - [x] Add courier management
-- [ ] Add vehicle management
+- [x] Add vehicle management
 - [ ] Implement courier and vehicle assignment workflows
 - [x] Calculate shipment prices based on weight
 - [ ] Extend shipment pricing with additional delivery conditions
