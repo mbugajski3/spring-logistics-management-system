@@ -68,6 +68,10 @@ public class Vehicle {
         if (maximumLoad.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Maximum load cannot be 0 or below.");
         }
+
+        if (maximumLoad.compareTo(new BigDecimal("1600.00")) > 0) {
+            throw new IllegalArgumentException("Maximum load cannot be over 1600 kg.");
+        }
         this.maximumLoad = maximumLoad;
 
         this.active = true;
