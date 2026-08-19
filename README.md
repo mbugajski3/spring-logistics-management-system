@@ -3,8 +3,11 @@
 ## About the project
 
 Logistics Management System is a Spring Boot REST API designed to support the core operations of a logistics company.
+The application currently supports customer, shipment, courier, vehicle, and shipment assignment management.
+Customers can be created, retrieved, updated, activated, deactivated, and deleted according to domain rules. Shipments can be created for existing customers, persisted in PostgreSQL, priced automatically based on weight, and moved through a controlled delivery lifecycle. Couriers and vehicles have controlled availability states and can be assigned to shipments through a transactional assignment workflow.
 
-The application currently supports customer, shipment, courier, and vehicle management. Customers can be created, retrieved, updated, activated, deactivated, and deleted according to domain rules. Shipments can be created for existing customers, persisted in PostgreSQL, priced automatically based on weight, and moved through a controlled delivery lifecycle. Couriers can be created, retrieved, activated, deactivated, and moved between available and busy states according to domain rules. Vehicles can be created, retrieved, validated by registration number and maximum load, and moved between available, busy, and inactive states.
+Shipment assignments connect a shipment with an available courier and vehicle. The assignment process validates the shipment state and vehicle load capacity, marks the selected courier and vehicle as busy, moves the shipment to `READY_FOR_PICKUP`, and persists the assignment as one atomic database transaction. If any part of the operation fails, the transaction is rolled back to prevent partial state changes.
+
 The shipment lifecycle currently supports the following states:
 
 CREATED → READY_FOR_PICKUP → IN_TRANSIT → DELIVERED
@@ -17,7 +20,8 @@ The project includes request validation, domain-specific exceptions, centralized
 
 This is my first Spring Boot project and an important part of my backend development portfolio. I develop it incrementally as I learn new backend technologies and architectural concepts.
 
-The next major stages of the project will focus on shipment assignment workflows and further integration between shipments, couriers, and vehicles.
+The next major stages of the project will focus on extending shipment assignment with reassignment, assignment history, concurrency control, pagination, and further logistics workflow automation.
+
 ## Current features
 
 ### Customer management
@@ -64,16 +68,16 @@ The next major stages of the project will focus on shipment assignment workflows
 - Return 404 Not Found for missing couriers
 - Return 409 Conflict for invalid courier state transitions
 
-### Vehicle Management
+### Vehicle management
 
-- Creating vehicles
-- Retrieving all vehicles
-- Retrieving a vehicle by ID
-- Unique registration number validation
-- Maximum load validation
-- Vehicle type support
-- Vehicle availability and activity management
-- Transactional status updates using JPA dirty checking
+- Create vehicles
+- Retrieve all vehicles
+- Retrieve a vehicle by ID
+- Enforce unique registration numbers
+- Validate maximum load
+- Support multiple vehicle types
+- Manage vehicle availability and activity
+- Perform transactional status updates using JPA dirty checking
 
 #### Vehicle statuses
 
@@ -89,6 +93,21 @@ Supported status transitions:
 - `BUSY → AVAILABLE`
 - `AVAILABLE → INACTIVE`
 - `INACTIVE → AVAILABLE`
+
+### Shipment assignment
+
+- Assign a shipment to a courier and vehicle
+- Allow assignments only for shipments in the `CREATED` state
+- Require the selected courier to be active and available
+- Require the selected vehicle to be active and available
+- Validate vehicle maximum load against shipment weight
+- Mark the courier and vehicle as busy after a successful assignment
+- Automatically move the shipment from `CREATED` to `READY_FOR_PICKUP`
+- Persist the shipment, courier, vehicle, and assignment changes atomically
+- Roll back the entire operation if any part of the assignment fails
+- Return dedicated `ShipmentAssignmentResponse` DTOs
+- Return `404 Not Found` for missing shipment, courier, or vehicle
+- Return `409 Conflict` for invalid assignment conditions
 
 ### API and infrastructure
 
@@ -144,6 +163,11 @@ Supported status transitions:
 | `POST`  | `/api/vehicles`                        | Create a new vehicle     | `201 Created`, `400 Bad Request`, `409 Conflict`            |
 | `PATCH` | `/api/vehicles/{vehicleId}/status`     | Update vehicle status    | `200 OK`, `404 Not Found`, `409 Conflict`, `400 Bad Request`|
 
+## Shipment Assignment API endpoint
+
+| Method | Endpoint                                  | Description                              | Possible responses                                            |
+|--------|-------------------------------------------|------------------------------------------|---------------------------------------------------------------|
+| `POST` | `/api/shipments/{shipmentId}/assignment` | Assign a courier and vehicle to shipment | `201 Created`, `400 Bad Request`, `404 Not Found`, `409 Conflict` |
 
 
 ## Technologies
@@ -201,6 +225,16 @@ src/main/java/com/mbugajski/logistics/
 │   ├── repository/
 │   └── service/
 ├── vehicle/
+│   ├── controller/
+│   ├── dto/
+│   │   ├── request/
+│   │   └── response/
+│   ├── entity/
+│   ├── exception/
+│   ├── mapper/
+│   ├── repository/
+│   └── service/
+├── assignment/
 │   ├── controller/
 │   ├── dto/
 │   │   ├── request/
@@ -273,6 +307,13 @@ The project includes automated tests for multiple application layers:
 - JPA dirty checking tests
 - vehicle service tests
 - vehicle REST controller and validation tests
+- shipment assignment domain tests
+- shipment assignment service unit tests
+- shipment assignment REST controller tests
+- shipment assignment request validation tests
+- transactional shipment assignment integration tests
+- transaction rollback verification when assignment fails
+- persistence verification across shipment, courier, vehicle, and assignment state changes
 
 Tests can be executed locally with Maven Wrapper:
 
@@ -335,6 +376,7 @@ http://localhost:8080/api/customers
 http://localhost:8080/api/shipments
 http://localhost:8080/api/couriers
 http://localhost:8080/api/vehicles
+http://localhost:8080/api/shipments/{shipmentId}/assignment
 ```
 
 ## Example requests
@@ -360,6 +402,27 @@ Content-Type: application/json
     "postalCode": "80-831",
     "country": "Poland"
   }
+}
+```
+### Example customer created response
+
+```json
+{
+  "id": 1,
+  "firstName": "Anna",
+  "lastName": "Kowalska",
+  "email": "anna.kowalska@example.com",
+  "phoneNumber": "500600700",
+  "address": {
+    "street": "Długa",
+    "buildingNumber": "10A",
+    "apartmentNumber": "5",
+    "city": "Gdańsk",
+    "postalCode": "80-831",
+    "country": "Poland"
+  },
+  "debt": 0.00,
+  "active": true
 }
 ```
 
@@ -390,22 +453,6 @@ Content-Type: application/json
   "weight": 7.00
 }
 ```
-
-### Create vehicle
-
-```http
-POST http://localhost:8080/api/vehicles
-Content-Type: application/json
-
-{
-  "brand": "Ford",
-  "model": "Transit",
-  "registrationNumber": "GD 8032D",
-  "vehicleType": "VAN",
-  "maximumLoad": 120.00
-}
-```
-
 
 ### Example shipment created response:
 
@@ -438,6 +485,48 @@ Content-Type: application/json
 }
 ```
 
+### Create a courier
+
+```http
+POST http://localhost:8080/api/couriers
+Content-Type: application/json
+
+{
+  "firstName": "Piotr",
+  "lastName": "Nowak",
+  "phoneNumber": "600700800"
+}
+```
+
+### Example courier created response
+
+```json
+{
+    "id": 1,
+    "firstName": "Piotr",
+    "lastName": "Nowak",
+    "phoneNumber": "600700800",
+    "active": true,
+    "available": true
+}
+```
+
+
+### Create vehicle
+
+```http
+POST http://localhost:8080/api/vehicles
+Content-Type: application/json
+
+{
+  "brand": "Ford",
+  "model": "Transit",
+  "registrationNumber": "GD 8032D",
+  "vehicleType": "VAN",
+  "maximumLoad": 120.00
+}
+```
+
 ### Example vehicle created response
 
 ```json
@@ -450,6 +539,29 @@ Content-Type: application/json
   "maximumLoad": 120.00,
   "active": true,
   "available": true
+}
+```
+
+### Assign a shipment
+
+```http
+POST http://localhost:8080/api/shipments/1/assignment
+Content-Type: application/json
+
+{
+  "courierId": 1,
+  "vehicleId": 1
+}
+```
+
+### Example shipment assignment response
+
+```json
+{
+  "assignmentId": 1,
+  "shipmentId": 1,
+  "courierId": 1,
+  "vehicleId": 1
 }
 ```
 
@@ -486,12 +598,22 @@ Content-Type: application/json
 - [x] Add shipment creation and management
 - [x] Add courier management
 - [x] Add vehicle management
-- [ ] Implement courier and vehicle assignment workflows
 - [x] Calculate shipment prices based on weight
+- [x] Add shipment assignment workflow
+- [x] Add transactional assignment of couriers and vehicles
+- [x] Validate vehicle capacity during assignment
+- [x] Verify transaction rollback with integration tests
 - [ ] Extend shipment pricing with additional delivery conditions
 - [ ] Add Docker configuration
 - [ ] Add OpenAPI documentation
 - [ ] Create a simple frontend for interacting with the system
+- [ ] Add shipment reassignment
+- [ ] Preserve assignment history
+- [ ] Release courier and vehicle after delivery or cancellation
+- [ ] Add pagination and filtering for large datasets
+- [ ] Handle concurrent shipment assignments
+- [ ] Add locking strategy for shared resources
+- [ ] Introduce automatic shipment dispatching
 
 ## Author
 
