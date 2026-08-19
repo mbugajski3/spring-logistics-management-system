@@ -16,6 +16,7 @@ import com.mbugajski.logistics.vehicle.entity.Vehicle;
 import com.mbugajski.logistics.vehicle.entity.VehicleType;
 import com.mbugajski.logistics.vehicle.exception.VehicleInvalidStateException;
 import com.mbugajski.logistics.vehicle.repository.VehicleRepository;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.junit.jupiter.api.Test;
@@ -54,6 +55,7 @@ public class ShipmentAssignmentServiceIntegrationTest {
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
     void shouldRollbackWhenVehicleCannotBeMarkedAsBusy() {
         Address customerAddress = createCustomerAddress();
         addressRepository.saveAndFlush(customerAddress);
@@ -86,7 +88,7 @@ public class ShipmentAssignmentServiceIntegrationTest {
     }
 
     @Test
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Transactional
     void shouldAssignShipment() {
         Address customerAddress = createCustomerAddress();
         addressRepository.saveAndFlush(customerAddress);
