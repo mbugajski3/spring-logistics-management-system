@@ -3,6 +3,7 @@ package com.mbugajski.logistics.shipment.service;
 import com.mbugajski.logistics.address.dto.request.CreateAddressRequest;
 import com.mbugajski.logistics.address.entity.Address;
 import com.mbugajski.logistics.address.repository.AddressRepository;
+import com.mbugajski.logistics.assignment.service.ShipmentAssignmentService;
 import com.mbugajski.logistics.customer.entity.Customer;
 import com.mbugajski.logistics.customer.exception.CustomerNotFoundException;
 import com.mbugajski.logistics.customer.repository.CustomerRepository;
@@ -23,11 +24,13 @@ public class ShipmentService {
     private final ShipmentRepository shipmentRepository;
     private final CustomerRepository customerRepository;
     private final AddressRepository addressRepository;
+    private final ShipmentAssignmentService shipmentAssignmentService;
 
-    public ShipmentService(ShipmentRepository shipmentRepository, CustomerRepository customerRepository, AddressRepository addressRepository) {
+    public ShipmentService(ShipmentRepository shipmentRepository, CustomerRepository customerRepository, AddressRepository addressRepository, ShipmentAssignmentService shipmentAssignmentService) {
         this.shipmentRepository = shipmentRepository;
         this.customerRepository = customerRepository;
         this.addressRepository = addressRepository;
+        this.shipmentAssignmentService = shipmentAssignmentService;
     }
 
     @Transactional
@@ -108,6 +111,8 @@ public class ShipmentService {
 
         shipmentFound.markAsDelivered();
 
+        shipmentAssignmentService.releaseResourcesForShipment(id);
+
         return shipmentFound;
     }
 
@@ -116,6 +121,8 @@ public class ShipmentService {
         Shipment shipmentFound = findById(id);
 
         shipmentFound.markAsCancelled();
+
+        shipmentAssignmentService.releaseResourcesForShipment(id);
 
         return shipmentFound;
     }

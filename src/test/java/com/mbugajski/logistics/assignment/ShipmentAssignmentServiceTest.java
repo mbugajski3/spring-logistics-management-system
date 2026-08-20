@@ -272,6 +272,7 @@ public class ShipmentAssignmentServiceTest {
         when(courierRepository.findById(1L)).thenReturn(Optional.of(courier));
         when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle));
 
+
         VehicleInvalidStateException exception = assertThrows(VehicleInvalidStateException.class,() -> shipmentAssignmentService.assign(1L, 1L, 1L));
 
         assertEquals("Vehicle must be active and available to mark as busy.", exception.getMessage());
@@ -279,6 +280,52 @@ public class ShipmentAssignmentServiceTest {
         assertFalse(vehicle.isActive());
 
         verify(assignmentRepository, never()).save(any(ShipmentAssignment.class));
+    }
+
+    @Test
+    void shouldReleaseResources() {
+        Shipment shipment = createShipment();
+        Courier courier = createCourier();
+        Vehicle vehicle = createVehicle();
+
+        courier.markAsBusy();
+        vehicle.markAsBusy();
+
+        ShipmentAssignment assignment = new ShipmentAssignment(shipment, courier, vehicle);
+
+        when(assignmentRepository.findByShipmentId(1L)).thenReturn(Optional.of(assignment));
+
+        shipmentAssignmentService.releaseResourcesForShipment(1L);
+
+        assertTrue(courier.isAvailable());
+        assertTrue(vehicle.isAvailable());
+    }
+
+    @Test
+    void shouldDoNothingWhenShipmentAssignmentNotFound() {
+        when(assignmentRepository.findByShipmentId(1L)).thenReturn(Optional.empty());
+
+        assertDoesNotThrow(() -> shipmentAssignmentService.releaseResourcesForShipment(1L));
+
+        verify(assignmentRepository).findByShipmentId(1L);
+    }
+
+    @Test
+    void shouldThrowWhenShipmentIdIsNull() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,() -> shipmentAssignmentService.releaseResourcesForShipment(null));
+
+        assertEquals("Shipment ID cannot be null, zero or below.", exception.getMessage());
+
+        verifyNoInteractions(assignmentRepository);
+    }
+
+    @Test
+    void shouldThrowWhenShipmentIdIsZeroOrBelow() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> shipmentAssignmentService.releaseResourcesForShipment(0L));
+
+        assertEquals("Shipment ID cannot be null, zero or below.", exception.getMessage());
+
+        verifyNoInteractions(assignmentRepository);
     }
 
     private Shipment createShipment() {

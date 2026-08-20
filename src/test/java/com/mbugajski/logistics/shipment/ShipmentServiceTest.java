@@ -3,6 +3,7 @@ package com.mbugajski.logistics.shipment;
 import com.mbugajski.logistics.address.dto.request.CreateAddressRequest;
 import com.mbugajski.logistics.address.entity.Address;
 import com.mbugajski.logistics.address.repository.AddressRepository;
+import com.mbugajski.logistics.assignment.service.ShipmentAssignmentService;
 import com.mbugajski.logistics.customer.entity.Customer;
 import com.mbugajski.logistics.customer.exception.CustomerNotFoundException;
 import com.mbugajski.logistics.customer.repository.CustomerRepository;
@@ -36,8 +37,12 @@ public class ShipmentServiceTest {
     @Mock
     private AddressRepository addressRepository;
 
+    @Mock
+    private ShipmentAssignmentService shipmentAssignmentService;
+
     @InjectMocks
     private ShipmentService shipmentService;
+
 
     @Test
     void shouldCreateShipment() {
@@ -298,6 +303,35 @@ public class ShipmentServiceTest {
 
         verify(shipmentRepository).findById(1L);
         verify(shipmentRepository, never()).save(any(Shipment.class));
+    }
+
+    @Test
+    void shouldReleaseResourcesAfterDelivery() {
+        Shipment shipment = createShipment();
+        shipment.markAsReadyForPickup();
+        shipment.markAsInTransit();
+
+        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
+
+        Shipment deliveredShipment = shipmentService.markAsDelivered(1L);
+
+        assertEquals(ShipmentStatus.DELIVERED, deliveredShipment.getStatus());
+
+        verify(shipmentAssignmentService).releaseResourcesForShipment(1L);
+    }
+
+    @Test
+    void shouldReleaseResourcesAfterCancelling() {
+        Shipment shipment = createShipment();
+        shipment.markAsReadyForPickup();
+
+        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
+
+        Shipment cancelledShipment = shipmentService.markAsCancelled(1L);
+
+        assertEquals(ShipmentStatus.CANCELLED, cancelledShipment.getStatus());
+
+        verify(shipmentAssignmentService).releaseResourcesForShipment(1L);
     }
 
 
