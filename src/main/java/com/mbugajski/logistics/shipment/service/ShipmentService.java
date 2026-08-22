@@ -9,14 +9,16 @@ import com.mbugajski.logistics.customer.exception.CustomerNotFoundException;
 import com.mbugajski.logistics.customer.repository.CustomerRepository;
 import com.mbugajski.logistics.shipment.dto.request.CreateShipmentRequest;
 import com.mbugajski.logistics.shipment.entity.Shipment;
+import com.mbugajski.logistics.shipment.exception.ShipmentInvalidStatusException;
 import com.mbugajski.logistics.shipment.exception.ShipmentNotFoundException;
 import com.mbugajski.logistics.shipment.repository.ShipmentRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
 
 @Service
 public class ShipmentService {
@@ -83,8 +85,22 @@ public class ShipmentService {
                 .orElseThrow(() -> new ShipmentNotFoundException(id));
     }
 
-    public List<Shipment> findAll() {
-        return shipmentRepository.findAll();
+    public Page<Shipment> findAllByPageNumber(int pageNumber, int pageSize) {
+        if (pageNumber < 0) {
+            throw new IllegalArgumentException("Page number cannot be negative.");
+        }
+
+        if (pageSize <= 0) {
+            throw new IllegalArgumentException("Page size must be greater than 0.");
+        }
+
+        if (pageSize > 100) {
+            throw new IllegalArgumentException("Page size cannot be more than 100.");
+        }
+
+        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+
+        return shipmentRepository.findAll(pageable);
     }
 
     @Transactional

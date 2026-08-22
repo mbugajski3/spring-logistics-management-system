@@ -19,6 +19,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 import java.math.BigDecimal;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
@@ -332,6 +336,45 @@ public class ShipmentServiceTest {
         assertEquals(ShipmentStatus.CANCELLED, cancelledShipment.getStatus());
 
         verify(shipmentAssignmentService).releaseResourcesForShipment(1L);
+    }
+
+    @Test
+    void shouldThrowWhenPageIsNegative() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,() -> shipmentService.findAllByPageNumber(-5, 4));
+
+        assertEquals("Page number cannot be negative.", exception.getMessage());
+
+        verifyNoInteractions(shipmentRepository);
+    }
+
+    @Test
+    void shouldThrowWhenPageSizeIsEqualOrLessThanZero() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,() -> shipmentService.findAllByPageNumber(2, 0));
+
+        assertEquals("Page size must be greater than 0.", exception.getMessage());
+
+        verifyNoInteractions(shipmentRepository);
+    }
+
+    @Test
+    void shouldThrowWhenPageSizeIsOverLimit() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,() -> shipmentService.findAllByPageNumber(2, 101));
+
+        assertEquals("Page size cannot be more than 100.", exception.getMessage());
+
+        verifyNoInteractions(shipmentRepository);
+    }
+
+    @Test
+    void shouldReturnPage() {
+        Page<Shipment> expectedPage = mock(Page.class);
+
+        when(shipmentRepository.findAll(any(Pageable.class))).thenReturn(expectedPage);
+
+        Page<Shipment> result = shipmentService.findAllByPageNumber(2, 10);
+
+        assertSame(expectedPage, result);
+        verify(shipmentRepository).findAll(PageRequest.of(2, 10));
     }
 
 
