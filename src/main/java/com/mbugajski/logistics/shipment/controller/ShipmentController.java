@@ -1,11 +1,13 @@
 package com.mbugajski.logistics.shipment.controller;
 
 import com.mbugajski.logistics.shipment.dto.request.CreateShipmentRequest;
+import com.mbugajski.logistics.shipment.dto.response.ShipmentPaginationResponse;
 import com.mbugajski.logistics.shipment.dto.response.ShipmentResponse;
 import com.mbugajski.logistics.shipment.entity.Shipment;
 import com.mbugajski.logistics.shipment.mapper.ShipmentMapper;
 import com.mbugajski.logistics.shipment.service.ShipmentService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,11 +24,10 @@ public class ShipmentController {
     }
 
     @GetMapping
-    public List<ShipmentResponse> findAll() {
-        return shipmentService.findAll()
-                .stream()
-                .map(ShipmentMapper::toResponse)
-                .toList();
+    public ShipmentPaginationResponse findAll(@RequestParam(name = "page", defaultValue = "0") int pageNumber, @RequestParam(name = "size", defaultValue = "20") int pageSize) {
+        Page<Shipment> shipments = shipmentService.findAllByPageNumber(pageNumber, pageSize);
+
+        return ShipmentMapper.paginationResponse(shipments);
     }
 
     @GetMapping("/{shipmentId}")

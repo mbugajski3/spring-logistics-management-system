@@ -6,12 +6,17 @@ import com.mbugajski.logistics.customer.entity.Customer;
 import com.mbugajski.logistics.shipment.controller.ShipmentController;
 import com.mbugajski.logistics.shipment.dto.request.CreateShipmentRequest;
 import com.mbugajski.logistics.shipment.entity.Shipment;
+import com.mbugajski.logistics.shipment.entity.ShipmentStatus;
 import com.mbugajski.logistics.shipment.exception.ShipmentInvalidStatusException;
 import com.mbugajski.logistics.shipment.exception.ShipmentNotFoundException;
 import com.mbugajski.logistics.shipment.service.ShipmentService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -38,48 +43,6 @@ public class ShipmentControllerTest {
 
     @Autowired
     private JsonMapper jsonMapper;
-
-    @Test
-    void shouldReturnAllShipments() throws Exception {
-        Customer customer1 = new Customer("Adrian", "Nowak", "adrian@nowak.com", "+48 782 230 124", createAddress());
-        Customer customer2 = new Customer("Janusz", "Lis", "janusz@lis.com", "+48 664 231 421", createAddress());
-        Shipment shipment1 = createShipment(customer1);
-        Shipment shipment2 = createShipment(customer2);
-
-        ReflectionTestUtils.setField(customer1, "id", 1L);
-        ReflectionTestUtils.setField(customer2, "id", 2L);
-
-        ReflectionTestUtils.setField(shipment1, "id", 1L);
-        ReflectionTestUtils.setField(shipment2, "id", 2L);
-
-        List<Shipment> shipmentList = List.of(shipment1, shipment2);
-
-        when(shipmentService.findAll()).thenReturn(shipmentList);
-
-        mockMvc.perform(get("/api/shipments"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].id").value(1))
-                .andExpect(jsonPath("$[0].customerId").value(1))
-                .andExpect(jsonPath("$[0].customerFirstName").value("Adrian"))
-                .andExpect(jsonPath("$[0].customerLastName").value("Nowak"))
-                .andExpect(jsonPath("$[0].pickupAddress.street").value("Odbiorowa"))
-                .andExpect(jsonPath("$[0].deliveryAddress.street").value("Wysyłkowa"))
-                .andExpect(jsonPath("$[0].weight").value(12.0))
-                .andExpect(jsonPath("$[0].status").value("CREATED"))
-                .andExpect(jsonPath("$[0].price").value(35.0))
-                .andExpect(jsonPath("$[1].id").value(2))
-                .andExpect(jsonPath("$[1].customerId").value(2))
-                .andExpect(jsonPath("$[1].customerFirstName").value("Janusz"))
-                .andExpect(jsonPath("$[1].customerLastName").value("Lis"))
-                .andExpect(jsonPath("$[1].pickupAddress.street").value("Odbiorowa"))
-                .andExpect(jsonPath("$[1].deliveryAddress.street").value("Wysyłkowa"))
-                .andExpect(jsonPath("$[1].weight").value(12.0))
-                .andExpect(jsonPath("$[1].status").value("CREATED"))
-                .andExpect(jsonPath("$[1].price").value(35.0));
-
-        verify(shipmentService).findAll();
-    }
 
     @Test
     void shouldReturnShipmentById() throws Exception {
@@ -292,8 +255,8 @@ public class ShipmentControllerTest {
         String requestJson = jsonMapper.writeValueAsString(shipmentRequest);
 
         mockMvc.perform(post("/api/shipments")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(requestJson))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
@@ -301,6 +264,170 @@ public class ShipmentControllerTest {
                 .andExpect(jsonPath("$.timestamp").exists());
 
         verifyNoInteractions(shipmentService);
+    }
+
+    @Test
+    void shouldReturnShipmentsPage() throws Exception {
+        Page<Shipment> shipmentPage = new PageImpl<>(
+                List.of(),
+                PageRequest.of(0, 20),
+                0
+        );
+
+        when(shipmentService.findAllByPageNumber(0, 20)).thenReturn(shipmentPage);
+
+        mockMvc.perform(get("/api/shipments"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.totalElements").value(0))
+                .andExpect(jsonPath("$.totalPages").value(0))
+                .andExpect(jsonPath("$.hasNext").value(false))
+                .andExpect(jsonPath("$.hasPrevious").value(false));
+
+        verify(shipmentService).findAllByPageNumber(0, 20);
+    }
+
+    @Test
+    void shouldReturnShipmentsPageUsingQueryParams() throws Exception {
+        Page<Shipment> shipmentPage = new PageImpl<>(
+                List.of(),
+                PageRequest.of(2, 10),
+                35
+        );
+
+        when(shipmentService.findAllByPageNumber(2, 10)).thenReturn(shipmentPage);
+
+        mockMvc.perform(get("/api/shipments?page=2&size=10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.page").value(2))
+                .andExpect(jsonPath("$.size").value(10))
+                .andExpect(jsonPath("$.totalElements").value(35))
+                .andExpect(jsonPath("$.totalPages").value(4))
+                .andExpect(jsonPath("$.hasNext").value(true))
+                .andExpect(jsonPath("$.hasPrevious").value(true));
+
+        verify(shipmentService).findAllByPageNumber(2, 10);
+    }
+
+    @Test
+    void shouldReturnPageWithShipment() throws Exception {
+        Customer customer = new Customer(
+                "Adrian",
+                "Nowak",
+                "adrian@nowak.com",
+                "+48 782 230 124",
+                createAddress()
+        );
+
+        Shipment shipment = createShipment(customer);
+
+        ReflectionTestUtils.setField(customer, "id", 1L);
+        ReflectionTestUtils.setField(shipment, "id", 2L);
+
+        Page<Shipment> shipmentPage = new PageImpl<>(
+                List.of(shipment),
+                PageRequest.of(2, 10),
+                35
+        );
+
+        when(shipmentService.findAllByPageNumber(2, 10)).thenReturn(shipmentPage);
+
+        mockMvc.perform(get("/api/shipments?page=2&size=10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(2L))
+                .andExpect(jsonPath("$.content[0].customerId").value(1L))
+                .andExpect(jsonPath("$.content[0].customerFirstName").value("Adrian"))
+                .andExpect(jsonPath("$.content[0].customerLastName").value("Nowak"))
+                .andExpect(jsonPath("$.content[0].pickupAddress.street").value("Odbiorowa"))
+                .andExpect(jsonPath("$.content[0].pickupAddress.buildingNumber").value("10"))
+                .andExpect(jsonPath("$.content[0].pickupAddress.apartmentNumber").value("2"))
+                .andExpect(jsonPath("$.content[0].pickupAddress.city").value("Odbiór"))
+                .andExpect(jsonPath("$.content[0].pickupAddress.postalCode").value("10-120"))
+                .andExpect(jsonPath("$.content[0].pickupAddress.country").value("Poland"))
+                .andExpect(jsonPath("$.content[0].deliveryAddress.street").value("Wysyłkowa"))
+                .andExpect(jsonPath("$.content[0].deliveryAddress.buildingNumber").value("5"))
+                .andExpect(jsonPath("$.content[0].deliveryAddress.apartmentNumber").value("3"))
+                .andExpect(jsonPath("$.content[0].deliveryAddress.city").value("Wysyłka"))
+                .andExpect(jsonPath("$.content[0].deliveryAddress.postalCode").value("90-192"))
+                .andExpect(jsonPath("$.content[0].deliveryAddress.country").value("Poland"))
+                .andExpect(jsonPath("$.content[0].weight").value(12.0))
+                .andExpect(jsonPath("$.content[0].status").value("CREATED"))
+                .andExpect(jsonPath("$.content[0].createdAt").exists())
+                .andExpect(jsonPath("$.page").value(2))
+                .andExpect(jsonPath("$.size").value(10))
+                .andExpect(jsonPath("$.totalElements").value(35))
+                .andExpect(jsonPath("$.totalPages").value(4))
+                .andExpect(jsonPath("$.hasNext").value(true))
+                .andExpect(jsonPath("$.hasPrevious").value(true))
+                .andExpect(jsonPath("$.pageable").doesNotExist())
+                .andExpect(jsonPath("$.sort").doesNotExist());
+
+        verify(shipmentService).findAllByPageNumber(2, 10);
+    }
+
+    @Test
+    void shouldThrowWhenPageQueryParamIsInvalid() throws Exception {
+        when(shipmentService.findAllByPageNumber(-1, 20))
+                .thenThrow(new IllegalArgumentException("Page number cannot be negative."));
+
+        mockMvc.perform(get("/api/shipments?page=-1&size=20"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("Page number cannot be negative."))
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        verify(shipmentService).findAllByPageNumber(-1, 20);
+    }
+
+    @Test
+    void shouldThrowWhenQueryPageSizeParamIsZero() throws Exception {
+        when(shipmentService.findAllByPageNumber(0, 0))
+                .thenThrow(new IllegalArgumentException("Page size must be greater than 0."));
+
+        mockMvc.perform(get("/api/shipments?page=0&size=0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("Page size must be greater than 0."))
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        verify(shipmentService).findAllByPageNumber(0, 0);
+    }
+
+    @Test
+    void shouldThrowWhenQueryPageSizeParamIsOverLimit() throws Exception {
+        when(shipmentService.findAllByPageNumber(0, 101))
+                .thenThrow(new IllegalArgumentException("Page size cannot be more than 100."));
+
+        mockMvc.perform(get("/api/shipments?page=0&size=101"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("Page size cannot be more than 100."))
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        verify(shipmentService).findAllByPageNumber(0, 101);
+    }
+
+    @Test
+    void shouldReturnEmptyContentWhenPageIsNotInRange() throws Exception {
+        Page<Shipment> shipmentPage = new PageImpl<>(
+                List.of(),
+                PageRequest.of(999, 20),
+                35
+        );
+
+        when(shipmentService.findAllByPageNumber(999, 20)).thenReturn(shipmentPage);
+
+        mockMvc.perform(get("/api/shipments?page=999&size=20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isEmpty());
+
+        verify(shipmentService).findAllByPageNumber(999, 20);
     }
 
     public CreateAddressRequest createPickupAddressRequest() {
