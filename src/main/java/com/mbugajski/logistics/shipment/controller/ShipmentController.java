@@ -4,9 +4,12 @@ import com.mbugajski.logistics.shipment.dto.request.CreateShipmentRequest;
 import com.mbugajski.logistics.shipment.dto.response.ShipmentPaginationResponse;
 import com.mbugajski.logistics.shipment.dto.response.ShipmentResponse;
 import com.mbugajski.logistics.shipment.entity.Shipment;
+import com.mbugajski.logistics.shipment.entity.ShipmentStatus;
 import com.mbugajski.logistics.shipment.mapper.ShipmentMapper;
+import com.mbugajski.logistics.shipment.repository.ShipmentSortBy;
 import com.mbugajski.logistics.shipment.service.ShipmentService;
 import jakarta.validation.Valid;
+import org.hibernate.query.SortDirection;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -24,8 +27,16 @@ public class ShipmentController {
     }
 
     @GetMapping
-    public ShipmentPaginationResponse findAll(@RequestParam(name = "page", defaultValue = "0") int pageNumber, @RequestParam(name = "size", defaultValue = "20") int pageSize) {
-        Page<Shipment> shipments = shipmentService.findAllByPageNumber(pageNumber, pageSize);
+    public ShipmentPaginationResponse findAll(@RequestParam(name = "page", defaultValue = "0") int pageNumber,
+                                              @RequestParam(name = "size", defaultValue = "20") int pageSize,
+                                              @RequestParam(name = "status", required = false) ShipmentStatus status,
+                                              @RequestParam(name = "customerId", required = false) Long customerId,
+                                              @RequestParam(name = "sortBy", required = false) ShipmentSortBy sortParam,
+                                              @RequestParam(name = "direction", required = false) String direction) {
+        String normalizedDirection =
+                direction == null ? null : direction.trim().toLowerCase();
+
+        Page<Shipment> shipments = shipmentService.findAllByPageNumber(pageNumber, pageSize, status, customerId, sortParam, normalizedDirection);
 
         return ShipmentMapper.paginationResponse(shipments);
     }

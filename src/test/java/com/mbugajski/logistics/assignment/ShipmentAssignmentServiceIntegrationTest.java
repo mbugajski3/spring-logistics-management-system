@@ -242,6 +242,7 @@ public class ShipmentAssignmentServiceIntegrationTest {
         assertEquals(1L, shipmentAssignmentRepository.count());
     }
 
+
     private Shipment createShipment(Address customerAddress, Customer customer, Address deliveryAddress) {
         return new Shipment(customer, customerAddress, deliveryAddress, new BigDecimal("5.00"));
     }
