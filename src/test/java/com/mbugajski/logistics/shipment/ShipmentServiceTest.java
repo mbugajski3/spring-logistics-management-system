@@ -12,18 +12,22 @@ import com.mbugajski.logistics.shipment.entity.Shipment;
 import com.mbugajski.logistics.shipment.exception.ShipmentInvalidStatusException;
 import com.mbugajski.logistics.shipment.exception.ShipmentNotFoundException;
 import com.mbugajski.logistics.shipment.repository.ShipmentRepository;
+import com.mbugajski.logistics.shipment.repository.ShipmentSortBy;
 import com.mbugajski.logistics.shipment.service.ShipmentService;
 import com.mbugajski.logistics.shipment.entity.ShipmentStatus;
+import com.mbugajski.logistics.shipment.specification.ShipmentSpecification;
+import org.hibernate.query.SortDirection;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.PredicateSpecification;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -340,7 +344,7 @@ public class ShipmentServiceTest {
 
     @Test
     void shouldThrowWhenPageIsNegative() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,() -> shipmentService.findAllByPageNumber(-5, 4));
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,() -> shipmentService.findAllByPageNumber(-5, 4, null, null));
 
         assertEquals("Page number cannot be negative.", exception.getMessage());
 
@@ -349,7 +353,7 @@ public class ShipmentServiceTest {
 
     @Test
     void shouldThrowWhenPageSizeIsEqualOrLessThanZero() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,() -> shipmentService.findAllByPageNumber(2, 0));
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,() -> shipmentService.findAllByPageNumber(2, 0, null, null));
 
         assertEquals("Page size must be greater than 0.", exception.getMessage());
 
@@ -358,7 +362,7 @@ public class ShipmentServiceTest {
 
     @Test
     void shouldThrowWhenPageSizeIsOverLimit() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,() -> shipmentService.findAllByPageNumber(2, 101));
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,() -> shipmentService.findAllByPageNumber(2, 101, null, null));
 
         assertEquals("Page size cannot be more than 100.", exception.getMessage());
 
@@ -371,12 +375,209 @@ public class ShipmentServiceTest {
 
         when(shipmentRepository.findAll(any(Pageable.class))).thenReturn(expectedPage);
 
-        Page<Shipment> result = shipmentService.findAllByPageNumber(2, 10);
+        Page<Shipment> result = shipmentService.findAllByPageNumber(2, 10, null, null);
 
         assertSame(expectedPage, result);
         verify(shipmentRepository).findAll(PageRequest.of(2, 10));
     }
 
+    @Test
+    void shouldReturnDefaultPagination() {
+        Page<Shipment> expectedPage = mock(Page.class);
+
+        when(shipmentRepository.findAll(any(Pageable.class))).thenReturn(expectedPage);
+
+        Page<Shipment> result = shipmentService.findAllByPageNumber(2,10, null, null);
+
+        assertSame(expectedPage, result);
+        verify(shipmentRepository).findAll(PageRequest.of(2, 10));
+    }
+
+    @Test
+    void shouldReturnPageFilteredByStatus() {
+        Page<Shipment> expectedPage = mock(Page.class);
+
+        doReturn(expectedPage).when(shipmentRepository).findBy(any(PredicateSpecification.class), any());
+
+        Page<Shipment> result = shipmentService.findAllByPageNumber(2, 10, ShipmentStatus.CREATED, null);
+
+        assertSame(expectedPage, result);
+
+        verify(shipmentRepository).findBy(any(PredicateSpecification.class), any());
+
+        verify(shipmentRepository, never()).findAll(any(Pageable.class));
+    }
+
+    @Test
+    void shouldReturnPageFilteredByCustomerId() {
+        Page<Shipment> expectedPage = mock(Page.class);
+
+        doReturn(expectedPage).when(shipmentRepository).findBy(any(PredicateSpecification.class), any());
+
+        Page<Shipment> result = shipmentService.findAllByPageNumber(2, 10, null, 1L);
+
+        assertSame(expectedPage, result);
+
+        verify(shipmentRepository).findBy(any(PredicateSpecification.class), any());
+
+        verify(shipmentRepository, never()).findAll(any(Pageable.class));
+    }
+
+    @Test
+    void shouldReturnPageFilteredByStatusAndCustomerId() {
+        Page<Shipment> expectedPage = mock(Page.class);
+
+        doReturn(expectedPage).when(shipmentRepository).findBy(any(PredicateSpecification.class), any());
+
+        Page<Shipment> result = shipmentService.findAllByPageNumber(2, 10, ShipmentStatus.CREATED, 1L);
+
+        assertSame(expectedPage, result);
+
+        verify(shipmentRepository).findBy(any(PredicateSpecification.class), any());
+
+        verify(shipmentRepository, never()).findAll(any(Pageable.class));
+    }
+
+    @Test
+    void shouldReturnPageSortedByParamAscending() {
+        Page<Shipment> expectedPage = mock(Page.class);
+
+        when(shipmentRepository.findAll(any(Pageable.class))).thenReturn(expectedPage);
+
+        Page<Shipment> result = shipmentService.findAllByPageNumber(2, 10, null, null, ShipmentSortBy.price, "asc");
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        assertSame(expectedPage, result);
+
+        verify(shipmentRepository).findAll(pageableCaptor.capture());
+
+        Pageable capturedPageable = pageableCaptor.getValue();
+
+        assertEquals(2, capturedPageable.getPageNumber());
+        assertEquals(10, capturedPageable.getPageSize());
+
+        Sort.Order priceOrder = capturedPageable.getSort().getOrderFor("price");
+
+        assertNotNull(priceOrder);
+        assertEquals("price", priceOrder.getProperty());
+        assertEquals(Sort.Direction.ASC, priceOrder.getDirection());
+    }
+
+    @Test
+    void shouldReturnPageSortedByParamDescending() {
+        Page<Shipment> expectedPage = mock(Page.class);
+
+        when(shipmentRepository.findAll(any(Pageable.class))).thenReturn(expectedPage);
+
+        Page<Shipment> result = shipmentService.findAllByPageNumber(2, 10, null, null, ShipmentSortBy.price, "desc");
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        assertSame(expectedPage, result);
+
+        verify(shipmentRepository).findAll(pageableCaptor.capture());
+
+        Pageable capturedPageable = pageableCaptor.getValue();
+
+        assertEquals(2, capturedPageable.getPageNumber());
+        assertEquals(10, capturedPageable.getPageSize());
+
+        Sort.Order priceOrder = capturedPageable.getSort().getOrderFor("price");
+
+        assertNotNull(priceOrder);
+        assertEquals("price", priceOrder.getProperty());
+        assertEquals(Sort.Direction.DESC, priceOrder.getDirection());
+    }
+
+    @Test
+    void shouldReturnPageSortedByParamWeight() {
+        Page<Shipment> expectedPage = mock(Page.class);
+
+        when(shipmentRepository.findAll(any(Pageable.class))).thenReturn(expectedPage);
+
+        Page<Shipment> result = shipmentService.findAllByPageNumber(2, 10, null, null, ShipmentSortBy.weight, "desc");
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        assertSame(expectedPage, result);
+
+        verify(shipmentRepository).findAll(pageableCaptor.capture());
+
+        Pageable capturedPageable = pageableCaptor.getValue();
+
+        assertEquals(2, capturedPageable.getPageNumber());
+        assertEquals(10, capturedPageable.getPageSize());
+
+        Sort.Order weightOrder = capturedPageable.getSort().getOrderFor("weight");
+
+        assertNotNull(weightOrder);
+        assertEquals("weight", weightOrder.getProperty());
+        assertEquals(Sort.Direction.DESC, weightOrder.getDirection());
+    }
+
+    @Test
+    void shouldReturnPageSortedByParamCreatedAt() {
+        Page<Shipment> expectedPage = mock(Page.class);
+
+        when(shipmentRepository.findAll(any(Pageable.class))).thenReturn(expectedPage);
+
+        Page<Shipment> result = shipmentService.findAllByPageNumber(2, 10, null, null, ShipmentSortBy.createdAt, "desc");
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        assertSame(expectedPage, result);
+
+        verify(shipmentRepository).findAll(pageableCaptor.capture());
+
+        Pageable capturedPageable = pageableCaptor.getValue();
+
+        assertEquals(2, capturedPageable.getPageNumber());
+        assertEquals(10, capturedPageable.getPageSize());
+
+        Sort.Order createdAtOrder = capturedPageable.getSort().getOrderFor("createdAt");
+
+        assertNotNull(createdAtOrder);
+        assertEquals("createdAt", createdAtOrder.getProperty());
+        assertEquals(Sort.Direction.DESC, createdAtOrder.getDirection());
+    }
+
+    @Test
+    void shouldReturnPageWithoutSorting() {
+        Page<Shipment> expectedPage = mock(Page.class);
+
+        when(shipmentRepository.findAll(any(Pageable.class))).thenReturn(expectedPage);
+
+        Page<Shipment> result = shipmentService.findAllByPageNumber(2, 10, null, null);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+        assertSame(expectedPage, result);
+
+        verify(shipmentRepository).findAll(pageableCaptor.capture());
+
+        Pageable capturedPageable = pageableCaptor.getValue();
+
+        assertEquals(2, capturedPageable.getPageNumber());
+        assertEquals(10, capturedPageable.getPageSize());
+        assertTrue(capturedPageable.getSort().isUnsorted());
+    }
+
+    @Test
+    void shouldThrowWhenDirectionParamIsInvalid() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> shipmentService.findAllByPageNumber(2, 10, null, null, ShipmentSortBy.price, null));
+
+        assertEquals("If sortBy exists, then direction cannot be null.", exception.getMessage());
+        verifyNoInteractions(shipmentRepository);
+    }
+
+    @Test
+    void shouldThrowWhenSortParamIsInvalid() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> shipmentService.findAllByPageNumber(2, 10, null, null, null, "desc"));
+
+        assertEquals("If sortBy dont exist, then direction is useless.", exception.getMessage());
+        verifyNoInteractions(shipmentRepository);
+    }
 
 
     public CreateAddressRequest createPickupAddressRequest() {

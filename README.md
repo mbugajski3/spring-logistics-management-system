@@ -20,8 +20,7 @@ The project includes request validation, domain-specific exceptions, centralized
 
 This is my first Spring Boot project and an important part of my backend development portfolio. I develop it incrementally as I learn new backend technologies and architectural concepts.
 
-The next major stages of the project will focus on extending shipment assignment with reassignment, assignment history, concurrency control, pagination, and further logistics workflow automation.
-
+The next major stages of the project will focus on extending shipment assignment with reassignment, assignment history, concurrency control, and further logistics workflow automation.
 ## Current features
 
 ### Customer management
@@ -40,8 +39,14 @@ The next major stages of the project will focus on extending shipment assignment
 
 - Create shipments for existing customers
 - Retrieve a shipment by ID
-- Retrieve all shipments
-- Store pickup and delivery addresses
+- Retrieve shipments using paginated responses
+- Filter shipments by status
+- Filter shipments by customer ID
+- Combine shipment filters using AND conditions
+- Sort shipments by creation date, price, or weight
+- Support ascending and descending sorting
+- Limit shipment page size to a maximum of 100 records
+- Return dedicated `ShipmentPaginationResponse` DTOs with pagination metadata- Store pickup and delivery addresses
 - Automatically calculate shipment price based on weight
 - Enforce shipment weight limits
 - Manage shipment lifecycle transitions
@@ -134,13 +139,35 @@ Supported status transitions:
 
 | Method  | Endpoint                                      | Description                       | Possible responses                               |
 |---------|-----------------------------------------------|-----------------------------------|--------------------------------------------------|
-| `GET`   | `/api/shipments`                              | Retrieve all shipments            | `200 OK`                                         |
+| `GET` | `/api/shipments` | Retrieve, paginate, filter, and sort shipments | `200 OK`, `400 Bad Request` |
 | `GET`   | `/api/shipments/{shipmentId}`                 | Retrieve a shipment by ID         | `200 OK`, `404 Not Found`                        |
 | `POST`  | `/api/shipments`                              | Create a new shipment             | `201 Created`, `400 Bad Request`, `404 Not Found`|
 | `PATCH` | `/api/shipments/{shipmentId}/ready-for-pickup`| Mark shipment as ready for pickup | `200 OK`, `404 Not Found`, `409 Conflict`        |
 | `PATCH` | `/api/shipments/{shipmentId}/in-transit`      | Mark shipment as in transit       | `200 OK`, `404 Not Found`, `409 Conflict`        |
 | `PATCH` | `/api/shipments/{shipmentId}/delivered`       | Mark shipment as delivered        | `200 OK`, `404 Not Found`, `409 Conflict`        |
 | `PATCH` | `/api/shipments/{shipmentId}/cancelled`       | Cancel a shipment                 | `200 OK`, `404 Not Found`, `409 Conflict`        |
+
+### Shipment listing query parameters
+
+`GET /api/shipments` supports pagination, filtering, and sorting.
+
+| Parameter | Required | Default | Description |
+|---|---|---|---|
+| `page` | No | `0` | Zero-based page number |
+| `size` | No | `20` | Number of shipments per page, maximum `100` |
+| `status` | No | — | Filter by shipment status |
+| `customerId` | No | — | Filter by customer ID |
+| `sortBy` | No | — | Sort by `createdAt`, `price`, or `weight` |
+| `direction` | No | — | Sort direction: `asc` or `desc` |
+
+`sortBy` and `direction` must be provided together.
+Filters can be combined and are applied using AND semantics.
+
+Example:
+
+```http
+GET http://localhost:8080/api/shipments?status=CREATED&customerId=1&page=0&size=10&sortBy=createdAt&direction=desc
+```
 
 ## Courier API endpoints
 
@@ -223,7 +250,8 @@ src/main/java/com/mbugajski/logistics/
 │   ├── exception/
 │   ├── mapper/
 │   ├── repository/
-│   └── service/
+│   ├── service/
+│   └── specification/
 ├── vehicle/
 │   ├── controller/
 │   ├── dto/
@@ -314,6 +342,12 @@ The project includes automated tests for multiple application layers:
 - transactional shipment assignment integration tests
 - transaction rollback verification when assignment fails
 - persistence verification across shipment, courier, vehicle, and assignment state changes
+- shipment pagination service and controller tests
+- shipment filtering unit and integration tests
+- shipment sorting unit and integration tests
+- combined shipment filtering and sorting tests
+- pagination metadata verification
+- invalid pagination and sorting parameter handling
 
 Tests can be executed locally with Maven Wrapper:
 
@@ -609,8 +643,8 @@ Content-Type: application/json
 - [ ] Create a simple frontend for interacting with the system
 - [ ] Add shipment reassignment
 - [ ] Preserve assignment history
-- [ ] Release courier and vehicle after delivery or cancellation
-- [ ] Add pagination and filtering for large datasets
+- [x] Release courier and vehicle after delivery or cancellation
+- [x] Add pagination and filtering for large datasets
 - [ ] Handle concurrent shipment assignments
 - [ ] Add locking strategy for shared resources
 - [ ] Introduce automatic shipment dispatching

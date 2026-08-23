@@ -9,14 +9,15 @@ import com.mbugajski.logistics.shipment.entity.Shipment;
 import com.mbugajski.logistics.shipment.entity.ShipmentStatus;
 import com.mbugajski.logistics.shipment.exception.ShipmentInvalidStatusException;
 import com.mbugajski.logistics.shipment.exception.ShipmentNotFoundException;
+import com.mbugajski.logistics.shipment.repository.ShipmentSortBy;
 import com.mbugajski.logistics.shipment.service.ShipmentService;
+import org.hibernate.query.SortDirection;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -274,7 +275,7 @@ public class ShipmentControllerTest {
                 0
         );
 
-        when(shipmentService.findAllByPageNumber(0, 20)).thenReturn(shipmentPage);
+        when(shipmentService.findAllByPageNumber(0, 20,null, null, null, null)).thenReturn(shipmentPage);
 
         mockMvc.perform(get("/api/shipments"))
                 .andExpect(status().isOk())
@@ -286,7 +287,7 @@ public class ShipmentControllerTest {
                 .andExpect(jsonPath("$.hasNext").value(false))
                 .andExpect(jsonPath("$.hasPrevious").value(false));
 
-        verify(shipmentService).findAllByPageNumber(0, 20);
+        verify(shipmentService).findAllByPageNumber(0, 20, null, null, null, null);
     }
 
     @Test
@@ -297,7 +298,7 @@ public class ShipmentControllerTest {
                 35
         );
 
-        when(shipmentService.findAllByPageNumber(2, 10)).thenReturn(shipmentPage);
+        when(shipmentService.findAllByPageNumber(2, 10, null, null, null, null)).thenReturn(shipmentPage);
 
         mockMvc.perform(get("/api/shipments?page=2&size=10"))
                 .andExpect(status().isOk())
@@ -309,7 +310,7 @@ public class ShipmentControllerTest {
                 .andExpect(jsonPath("$.hasNext").value(true))
                 .andExpect(jsonPath("$.hasPrevious").value(true));
 
-        verify(shipmentService).findAllByPageNumber(2, 10);
+        verify(shipmentService).findAllByPageNumber(2, 10, null, null, null, null);
     }
 
     @Test
@@ -333,7 +334,7 @@ public class ShipmentControllerTest {
                 35
         );
 
-        when(shipmentService.findAllByPageNumber(2, 10)).thenReturn(shipmentPage);
+        when(shipmentService.findAllByPageNumber(2, 10, null, null, null, null)).thenReturn(shipmentPage);
 
         mockMvc.perform(get("/api/shipments?page=2&size=10"))
                 .andExpect(status().isOk())
@@ -365,12 +366,12 @@ public class ShipmentControllerTest {
                 .andExpect(jsonPath("$.pageable").doesNotExist())
                 .andExpect(jsonPath("$.sort").doesNotExist());
 
-        verify(shipmentService).findAllByPageNumber(2, 10);
+        verify(shipmentService).findAllByPageNumber(2, 10, null, null, null, null);
     }
 
     @Test
     void shouldThrowWhenPageQueryParamIsInvalid() throws Exception {
-        when(shipmentService.findAllByPageNumber(-1, 20))
+        when(shipmentService.findAllByPageNumber(-1, 20, null, null, null, null))
                 .thenThrow(new IllegalArgumentException("Page number cannot be negative."));
 
         mockMvc.perform(get("/api/shipments?page=-1&size=20"))
@@ -380,12 +381,12 @@ public class ShipmentControllerTest {
                 .andExpect(jsonPath("$.message").value("Page number cannot be negative."))
                 .andExpect(jsonPath("$.timestamp").exists());
 
-        verify(shipmentService).findAllByPageNumber(-1, 20);
+        verify(shipmentService).findAllByPageNumber(-1, 20, null, null, null, null);
     }
 
     @Test
     void shouldThrowWhenQueryPageSizeParamIsZero() throws Exception {
-        when(shipmentService.findAllByPageNumber(0, 0))
+        when(shipmentService.findAllByPageNumber(0, 0, null, null, null, null))
                 .thenThrow(new IllegalArgumentException("Page size must be greater than 0."));
 
         mockMvc.perform(get("/api/shipments?page=0&size=0"))
@@ -395,12 +396,12 @@ public class ShipmentControllerTest {
                 .andExpect(jsonPath("$.message").value("Page size must be greater than 0."))
                 .andExpect(jsonPath("$.timestamp").exists());
 
-        verify(shipmentService).findAllByPageNumber(0, 0);
+        verify(shipmentService).findAllByPageNumber(0, 0, null, null, null, null);
     }
 
     @Test
     void shouldThrowWhenQueryPageSizeParamIsOverLimit() throws Exception {
-        when(shipmentService.findAllByPageNumber(0, 101))
+        when(shipmentService.findAllByPageNumber(0, 101, null, null, null, null))
                 .thenThrow(new IllegalArgumentException("Page size cannot be more than 100."));
 
         mockMvc.perform(get("/api/shipments?page=0&size=101"))
@@ -410,7 +411,7 @@ public class ShipmentControllerTest {
                 .andExpect(jsonPath("$.message").value("Page size cannot be more than 100."))
                 .andExpect(jsonPath("$.timestamp").exists());
 
-        verify(shipmentService).findAllByPageNumber(0, 101);
+        verify(shipmentService).findAllByPageNumber(0, 101, null, null, null, null);
     }
 
     @Test
@@ -421,13 +422,263 @@ public class ShipmentControllerTest {
                 35
         );
 
-        when(shipmentService.findAllByPageNumber(999, 20)).thenReturn(shipmentPage);
+        when(shipmentService.findAllByPageNumber(999, 20, null, null, null, null)).thenReturn(shipmentPage);
 
         mockMvc.perform(get("/api/shipments?page=999&size=20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isEmpty());
 
-        verify(shipmentService).findAllByPageNumber(999, 20);
+        verify(shipmentService).findAllByPageNumber(999, 20, null, null, null, null);
+    }
+
+    @Test
+    void shouldReturnShipmentsWithStatusCreated() throws Exception {
+        Customer customer = new Customer(
+                "Adrian",
+                "Nowak",
+                "adrian@nowak.com",
+                "+48 782 230 124",
+                createAddress()
+        );
+
+        Shipment shipment = createShipment(customer);
+
+        Page<Shipment> shipmentPage = new PageImpl<>(
+                List.of(shipment),
+                PageRequest.of(0, 20),
+                1
+        );
+
+        ReflectionTestUtils.setField(shipment, "id", 1L);
+        ReflectionTestUtils.setField(customer, "id", 2L);
+
+
+        when(shipmentService.findAllByPageNumber(0, 20, ShipmentStatus.CREATED, null, null, null)).thenReturn(shipmentPage);
+
+        mockMvc.perform(get("/api/shipments?status=CREATED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").exists())
+                .andExpect(jsonPath("$.content[0].id").value(1L))
+                .andExpect(jsonPath("$.content[0].customerId").value(2L))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1))
+                .andExpect(jsonPath("$.hasNext").value(false))
+                .andExpect(jsonPath("$.hasPrevious").value(false))
+                .andExpect(jsonPath("$.pageable").doesNotExist())
+                .andExpect(jsonPath("$.sort").doesNotExist());
+
+        verify(shipmentService).findAllByPageNumber(0, 20, ShipmentStatus.CREATED, null, null, null);
+    }
+
+    @Test
+    void shouldReturnShipmentsByCustomerId() throws Exception {
+        Customer customer = new Customer(
+                "Adrian",
+                "Nowak",
+                "adrian@nowak.com",
+                "+48 782 230 124",
+                createAddress()
+        );
+
+        Shipment shipment = createShipment(customer);
+
+        Page<Shipment> shipmentPage = new PageImpl<>(
+                List.of(shipment),
+                PageRequest.of(0, 20),
+                1
+        );
+
+        ReflectionTestUtils.setField(shipment, "id", 1L);
+        ReflectionTestUtils.setField(customer, "id", 2L);
+
+
+        when(shipmentService.findAllByPageNumber(0, 20, null, 2L, null, null)).thenReturn(shipmentPage);
+
+        mockMvc.perform(get("/api/shipments?customerId=2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").exists())
+                .andExpect(jsonPath("$.content[0].id").value(1L))
+                .andExpect(jsonPath("$.content[0].customerId").value(2L))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1))
+                .andExpect(jsonPath("$.hasNext").value(false))
+                .andExpect(jsonPath("$.hasPrevious").value(false))
+                .andExpect(jsonPath("$.pageable").doesNotExist())
+                .andExpect(jsonPath("$.sort").doesNotExist());
+
+        verify(shipmentService).findAllByPageNumber(0, 20, null, 2L, null, null);
+    }
+
+    @Test
+    void shouldReturnShipmentsByCustomerIdAndStatusCreated() throws Exception {
+        Customer customer = new Customer(
+                "Adrian",
+                "Nowak",
+                "adrian@nowak.com",
+                "+48 782 230 124",
+                createAddress()
+        );
+
+        Shipment shipment = createShipment(customer);
+
+        Page<Shipment> shipmentPage = new PageImpl<>(
+                List.of(shipment),
+                PageRequest.of(0, 20),
+                1
+        );
+
+        ReflectionTestUtils.setField(shipment, "id", 1L);
+        ReflectionTestUtils.setField(customer, "id", 2L);
+
+
+        when(shipmentService.findAllByPageNumber(0, 20, ShipmentStatus.CREATED, 2L, null, null)).thenReturn(shipmentPage);
+
+        mockMvc.perform(get("/api/shipments?status=CREATED&customerId=2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").exists())
+                .andExpect(jsonPath("$.content[0].id").value(1L))
+                .andExpect(jsonPath("$.content[0].customerId").value(2L))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1))
+                .andExpect(jsonPath("$.hasNext").value(false))
+                .andExpect(jsonPath("$.hasPrevious").value(false))
+                .andExpect(jsonPath("$.pageable").doesNotExist())
+                .andExpect(jsonPath("$.sort").doesNotExist());
+
+        verify(shipmentService).findAllByPageNumber(0, 20, ShipmentStatus.CREATED, 2L, null, null);
+    }
+
+    @Test
+    void shouldReturnShipmentsSortedByWeightDescending() throws Exception {
+        Customer customer = new Customer(
+                "Adrian",
+                "Nowak",
+                "adrian@nowak.com",
+                "+48 782 230 124",
+                createAddress()
+        );
+
+        Shipment shipment = createShipment(customer);
+
+        ReflectionTestUtils.setField(shipment, "id", 1L);
+        ReflectionTestUtils.setField(customer, "id", 2L);
+
+        Page<Shipment> shipmentPage = new PageImpl<>(
+                List.of(shipment),
+                PageRequest.of(0, 20),
+                1
+        );
+
+        when(shipmentService.findAllByPageNumber(0, 20, null, null, ShipmentSortBy.weight, "desc")).thenReturn(shipmentPage);
+
+        mockMvc.perform(get("/api/shipments?sortBy=weight&direction=desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").exists())
+                .andExpect(jsonPath("$.content[0].id").value(1L))
+                .andExpect(jsonPath("$.content[0].customerId").value(2L))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1))
+                .andExpect(jsonPath("$.hasNext").value(false))
+                .andExpect(jsonPath("$.hasPrevious").value(false));
+
+        verify(shipmentService).findAllByPageNumber(0, 20, null, null, ShipmentSortBy.weight, "desc");
+    }
+
+    @Test
+    void shouldReturnShipmentsSortedByPriceAscending() throws Exception {
+        Customer customer = new Customer(
+                "Adrian",
+                "Nowak",
+                "adrian@nowak.com",
+                "+48 782 230 124",
+                createAddress()
+        );
+
+        Shipment shipment = createShipment(customer);
+
+        ReflectionTestUtils.setField(shipment, "id", 1L);
+        ReflectionTestUtils.setField(customer, "id", 2L);
+
+        Page<Shipment> shipmentPage = new PageImpl<>(
+                List.of(shipment),
+                PageRequest.of(0, 20),
+                1
+        );
+
+        when(shipmentService.findAllByPageNumber(0, 20, ShipmentStatus.CREATED, null, ShipmentSortBy.price, "asc")).thenReturn(shipmentPage);
+
+        mockMvc.perform(get("/api/shipments?status=CREATED&sortBy=price&direction=asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").exists())
+                .andExpect(jsonPath("$.content[0].id").value(1L))
+                .andExpect(jsonPath("$.content[0].customerId").value(2L))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1))
+                .andExpect(jsonPath("$.hasNext").value(false))
+                .andExpect(jsonPath("$.hasPrevious").value(false));
+
+        verify(shipmentService).findAllByPageNumber(0, 20, ShipmentStatus.CREATED, null, ShipmentSortBy.price, "asc");
+    }
+
+    @Test
+    void shouldThrowWhenSortParamGivenWithoutDirection() throws Exception {
+        when(shipmentService.findAllByPageNumber(0, 20, null, null, ShipmentSortBy.weight, null)).thenThrow(new IllegalArgumentException("If sortBy exists, then direction cannot be null."));
+
+        mockMvc.perform(get("/api/shipments?sortBy=weight"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("If sortBy exists, then direction cannot be null."));
+
+        verify(shipmentService).findAllByPageNumber(0, 20, null, null, ShipmentSortBy.weight, null);
+    }
+
+    @Test
+    void shouldThrowWhenDirectionGivenWithoutSortParam() throws Exception {
+        when(shipmentService.findAllByPageNumber(0, 20, null, null, null, "desc")).thenThrow(new IllegalArgumentException("If sortBy dont exist, then direction is useless."));
+
+        mockMvc.perform(get("/api/shipments?direction=desc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("If sortBy dont exist, then direction is useless."));
+
+        verify(shipmentService).findAllByPageNumber(0, 20, null, null, null, "desc");
+    }
+
+    @Test
+    void shouldThrowWhenDirectionGivenIsInvalid() throws Exception {
+        when(shipmentService.findAllByPageNumber(0, 20, null, null, null, "sideways"))
+                .thenThrow(new IllegalArgumentException("Direction can be only asc or desc."));
+
+        mockMvc.perform(get("/api/shipments?direction=SIDEWAYS"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("Direction can be only asc or desc."));
+
+        verify(shipmentService).findAllByPageNumber(0, 20, null, null, null, "sideways");
+    }
+
+    @Test
+    void shouldThrowWhenSortParamIsInvalid() throws Exception {
+        mockMvc.perform(get("/api/shipments?sortBy=banana&direction=desc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").exists());
+
+        verifyNoInteractions(shipmentService);
     }
 
     public CreateAddressRequest createPickupAddressRequest() {
