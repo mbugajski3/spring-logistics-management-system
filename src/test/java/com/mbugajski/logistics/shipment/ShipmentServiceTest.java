@@ -329,7 +329,7 @@ public class ShipmentServiceTest {
 
         assertEquals(ShipmentStatus.DELIVERED, deliveredShipment.getStatus());
 
-        verify(shipmentAssignmentService).releaseResourcesForShipment(1L);
+        verify(shipmentAssignmentService).completeAssignmentForShipment(1L);
     }
 
     @Test
@@ -343,7 +343,7 @@ public class ShipmentServiceTest {
 
         assertEquals(ShipmentStatus.CANCELLED, cancelledShipment.getStatus());
 
-        verify(shipmentAssignmentService).releaseResourcesForShipment(1L);
+        verify(shipmentAssignmentService).cancelAssignmentForShipmentIfPresent(1L);
     }
 
     @Test
