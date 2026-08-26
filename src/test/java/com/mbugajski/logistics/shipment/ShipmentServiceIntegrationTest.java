@@ -4,9 +4,13 @@ import com.mbugajski.logistics.address.entity.Address;
 import com.mbugajski.logistics.address.repository.AddressRepository;
 
 
+import com.mbugajski.logistics.assignment.entity.AssignmentStatus;
+import com.mbugajski.logistics.assignment.entity.ShipmentAssignment;
+import com.mbugajski.logistics.assignment.repository.ShipmentAssignmentRepository;
 import com.mbugajski.logistics.assignment.service.ShipmentAssignmentService;
 import com.mbugajski.logistics.courier.entity.Courier;
 
+import com.mbugajski.logistics.courier.repository.CourierRepository;
 import com.mbugajski.logistics.customer.entity.Customer;
 import com.mbugajski.logistics.customer.repository.CustomerRepository;
 import com.mbugajski.logistics.shipment.entity.Shipment;
@@ -18,6 +22,9 @@ import com.mbugajski.logistics.vehicle.entity.Vehicle;
 import com.mbugajski.logistics.vehicle.entity.VehicleType;
 
 
+import com.mbugajski.logistics.vehicle.repository.VehicleRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.transaction.Transactional;
 import org.hibernate.query.SortDirection;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 
 @DataJpaTest
-@Import(ShipmentService.class)
+@Import({ShipmentService.class, ShipmentAssignmentService.class})
 public class ShipmentServiceIntegrationTest {
 
     @Autowired
@@ -45,10 +52,22 @@ public class ShipmentServiceIntegrationTest {
     private CustomerRepository customerRepository;
 
     @Autowired
+    private VehicleRepository vehicleRepository;
+
+    @Autowired
+    private CourierRepository courierRepository;
+
+    @Autowired
     private ShipmentService shipmentService;
 
-    @MockitoBean
-    private ShipmentAssignmentService assignmentService;
+    @Autowired
+    private ShipmentAssignmentRepository shipmentAssignmentRepository;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    @Autowired
+    private ShipmentAssignmentService shipmentAssignmentService;
 
     @Test
     void shouldReturnShipmentWithStatusCreated() {
@@ -173,6 +192,75 @@ public class ShipmentServiceIntegrationTest {
         assertEquals(shipment3, shipmentPage.getContent().get(0));
         assertEquals(shipment2, shipmentPage.getContent().get(1));
         assertEquals(shipment1, shipmentPage.getContent().get(2));
+    }
+
+    @Transactional
+    @Test
+    void shouldDeliverShipment() {
+        Address customerAddress = createCustomerAddress();
+        addressRepository.saveAndFlush(customerAddress);
+
+        Customer customer = createCustomer(customerAddress);
+        customerRepository.saveAndFlush(customer);
+
+        Address deliveryAddress = createDeliveryAddress();
+        addressRepository.saveAndFlush(deliveryAddress);
+
+        Shipment shipment = createShipment(customerAddress, customer, deliveryAddress);
+        shipmentRepository.saveAndFlush(shipment);
+
+        Courier courier = createCourier();
+        courierRepository.saveAndFlush(courier);
+
+        Vehicle vehicle = createVehicle();
+        vehicleRepository.saveAndFlush(vehicle);
+
+        assertEquals(0L, shipmentAssignmentRepository.count());
+        assertTrue(courier.isAvailable());
+        assertTrue(vehicle.isAvailable());
+        assertEquals(ShipmentStatus.CREATED, shipment.getStatus());
+
+        Shipment shipmentFound = shipmentRepository.findById(shipment.getId()).orElseThrow();
+        Courier courierFound = courierRepository.findById(courier.getId()).orElseThrow();
+        Vehicle vehicleFound = vehicleRepository.findById(vehicle.getId()).orElseThrow();
+
+        ShipmentAssignment shipmentAssignment = shipmentAssignmentService.assign(shipmentFound.getId(), courierFound.getId(), vehicleFound.getId());
+
+        Shipment assignedShipment = shipmentRepository.findById(shipmentFound.getId()).orElseThrow();
+        Courier assignedCourier = courierRepository.findById(courierFound.getId()).orElseThrow();
+        Vehicle assignedVehicle = vehicleRepository.findById(vehicleFound.getId()).orElseThrow();
+
+        assertEquals(ShipmentStatus.READY_FOR_PICKUP, assignedShipment.getStatus());
+        assertFalse(assignedCourier.isAvailable());
+        assertFalse(assignedVehicle.isAvailable());
+        assertEquals(1L, shipmentAssignmentRepository.count());
+        assertTrue(shipmentAssignmentRepository.existsById(shipmentAssignment.getId()));
+
+        shipmentService.confirmPickup(assignedShipment.getId());
+
+        Shipment pickedUpShipment = shipmentRepository.findById(shipmentFound.getId()).orElseThrow();
+
+        assertEquals(ShipmentStatus.IN_TRANSIT, pickedUpShipment.getStatus());
+        assertTrue(shipmentAssignmentRepository.existsById(shipmentAssignment.getId()));
+
+        shipmentService.confirmDelivery(pickedUpShipment.getId());
+
+        entityManager.flush();
+        entityManager.clear();
+
+        Shipment deliveredShipment = shipmentRepository.findById(shipment.getId()).orElseThrow();
+
+        Courier releasedCourier = courierRepository.findById(courier.getId()).orElseThrow();
+
+        Vehicle releasedVehicle = vehicleRepository.findById(vehicle.getId()).orElseThrow();
+
+        ShipmentAssignment completedAssignment = shipmentAssignmentRepository.findById(shipmentAssignment.getId()).orElseThrow();
+
+        assertEquals(ShipmentStatus.DELIVERED, deliveredShipment.getStatus());
+        assertTrue(releasedCourier.isAvailable());
+        assertTrue(releasedVehicle.isAvailable());
+        assertEquals(AssignmentStatus.COMPLETED, completedAssignment.getStatus());
+        assertNotNull(completedAssignment.getFinishedAt());
     }
 
     private Shipment createShipment(Address customerAddress, Customer customer, Address deliveryAddress) {

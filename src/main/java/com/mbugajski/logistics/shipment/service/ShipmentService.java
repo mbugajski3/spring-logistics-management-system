@@ -1,8 +1,8 @@
 package com.mbugajski.logistics.shipment.service;
-
 import com.mbugajski.logistics.address.dto.request.CreateAddressRequest;
 import com.mbugajski.logistics.address.entity.Address;
 import com.mbugajski.logistics.address.repository.AddressRepository;
+import com.mbugajski.logistics.assignment.entity.ShipmentAssignment;
 import com.mbugajski.logistics.assignment.service.ShipmentAssignmentService;
 import com.mbugajski.logistics.customer.entity.Customer;
 import com.mbugajski.logistics.customer.exception.CustomerNotFoundException;
@@ -14,15 +14,14 @@ import com.mbugajski.logistics.shipment.exception.ShipmentNotFoundException;
 import com.mbugajski.logistics.shipment.repository.ShipmentRepository;
 import com.mbugajski.logistics.shipment.repository.ShipmentSortBy;
 import jakarta.transaction.Transactional;
-import org.hibernate.query.SortDirection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.PredicateSpecification;
 import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
+import java.util.Optional;
 
 import static com.mbugajski.logistics.shipment.specification.ShipmentSpecification.findByCustomerId;
 import static com.mbugajski.logistics.shipment.specification.ShipmentSpecification.findByStatus;
@@ -204,19 +203,11 @@ public class ShipmentService {
         return shipmentRepository.findBy(predicateSpecification, query -> query.page(pageable));
     }
 
-
     @Transactional
-    public Shipment markAsReadyForPickup(Long id) {
+    public Shipment confirmPickup(Long id) {
         Shipment shipmentFound = findById(id);
 
-        shipmentFound.markAsReadyForPickup();
-
-        return shipmentFound;
-    }
-
-    @Transactional
-    public Shipment markAsInTransit(Long id) {
-        Shipment shipmentFound = findById(id);
+        shipmentAssignmentService.findActiveAssignment(id);
 
         shipmentFound.markAsInTransit();
 
@@ -224,23 +215,21 @@ public class ShipmentService {
     }
 
     @Transactional
-    public Shipment markAsDelivered(Long id) {
+    public Shipment confirmDelivery(Long id) {
         Shipment shipmentFound = findById(id);
-
         shipmentFound.markAsDelivered();
-
-        shipmentAssignmentService.releaseResourcesForShipment(id);
+        shipmentAssignmentService.completeAssignmentForShipment(id);
 
         return shipmentFound;
     }
 
     @Transactional
-    public Shipment markAsCancelled(Long id) {
+    public Shipment cancel(Long id) {
         Shipment shipmentFound = findById(id);
 
         shipmentFound.markAsCancelled();
 
-        shipmentAssignmentService.releaseResourcesForShipment(id);
+        shipmentAssignmentService.cancelAssignmentForShipmentIfPresent(id);
 
         return shipmentFound;
     }

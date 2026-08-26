@@ -3,7 +3,11 @@ package com.mbugajski.logistics.shipment;
 import com.mbugajski.logistics.address.dto.request.CreateAddressRequest;
 import com.mbugajski.logistics.address.entity.Address;
 import com.mbugajski.logistics.address.repository.AddressRepository;
+import com.mbugajski.logistics.assignment.entity.AssignmentStatus;
+import com.mbugajski.logistics.assignment.entity.ShipmentAssignment;
+import com.mbugajski.logistics.assignment.exception.ActiveAssignmentNotFoundException;
 import com.mbugajski.logistics.assignment.service.ShipmentAssignmentService;
+import com.mbugajski.logistics.courier.entity.Courier;
 import com.mbugajski.logistics.customer.entity.Customer;
 import com.mbugajski.logistics.customer.exception.CustomerNotFoundException;
 import com.mbugajski.logistics.customer.repository.CustomerRepository;
@@ -15,8 +19,8 @@ import com.mbugajski.logistics.shipment.repository.ShipmentRepository;
 import com.mbugajski.logistics.shipment.repository.ShipmentSortBy;
 import com.mbugajski.logistics.shipment.service.ShipmentService;
 import com.mbugajski.logistics.shipment.entity.ShipmentStatus;
-import com.mbugajski.logistics.shipment.specification.ShipmentSpecification;
-import org.hibernate.query.SortDirection;
+import com.mbugajski.logistics.vehicle.entity.Vehicle;
+import com.mbugajski.logistics.vehicle.entity.VehicleType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -25,9 +29,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.PredicateSpecification;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -175,36 +179,36 @@ public class ShipmentServiceTest {
         verifyNoInteractions(shipmentRepository);
     }
 
-    @Test
-    void shouldMarkShipmentAsReadyForPickup() {
-        Shipment shipment = createShipment();
+//    @Test
+//    void shouldMarkShipmentAsReadyForPickup() {
+//        Shipment shipment = createShipment();
+//
+//        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
+//
+//        Shipment updatedShipment = shipmentService.markAsReadyForPickup(1L);
+//
+//        assertEquals(ShipmentStatus.READY_FOR_PICKUP, updatedShipment.getStatus());
+//
+//        verify(shipmentRepository).findById(1L);
+//        verify(shipmentRepository, never()).save(any(Shipment.class));
+//    }
 
-        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
-
-        Shipment updatedShipment = shipmentService.markAsReadyForPickup(1L);
-
-        assertEquals(ShipmentStatus.READY_FOR_PICKUP, updatedShipment.getStatus());
-
-        verify(shipmentRepository).findById(1L);
-        verify(shipmentRepository, never()).save(any(Shipment.class));
-    }
-
-    @Test
-    void shouldThrowWhenShipmentIsAlreadyReadyForPickup() {
-        Shipment shipment = createShipment();
-
-        shipment.markAsReadyForPickup();
-
-        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
-
-        ShipmentInvalidStatusException exception = assertThrows(ShipmentInvalidStatusException.class, () -> shipmentService.markAsReadyForPickup(1L));
-
-        assertEquals("Only a shipment with status 'CREATED' can be marked as 'READY_FOR_PICKUP'.", exception.getMessage());
-        assertEquals(ShipmentStatus.READY_FOR_PICKUP, shipment.getStatus());
-
-        verify(shipmentRepository).findById(1L);
-        verify(shipmentRepository, never()).save(any(Shipment.class));
-    }
+//    @Test
+//    void shouldThrowWhenShipmentIsAlreadyReadyForPickup() {
+//        Shipment shipment = createShipment();
+//
+//        shipment.markAsReadyForPickup();
+//
+//        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
+//
+//        ShipmentInvalidStatusException exception = assertThrows(ShipmentInvalidStatusException.class, () -> shipmentService.markAsReadyForPickup(1L));
+//
+//        assertEquals("Only a shipment with status 'CREATED' can be marked as 'READY_FOR_PICKUP'.", exception.getMessage());
+//        assertEquals(ShipmentStatus.READY_FOR_PICKUP, shipment.getStatus());
+//
+//        verify(shipmentRepository).findById(1L);
+//        verify(shipmentRepository, never()).save(any(Shipment.class));
+//    }
 
     @Test
     void shouldMarkShipmentAsInTransit() {
@@ -213,7 +217,7 @@ public class ShipmentServiceTest {
 
         when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
 
-        Shipment updatedShipment = shipmentService.markAsInTransit(1L);
+        Shipment updatedShipment = shipmentService.confirmPickup(1L);
 
         assertEquals(ShipmentStatus.IN_TRANSIT, updatedShipment.getStatus());
 
@@ -227,7 +231,7 @@ public class ShipmentServiceTest {
 
         when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
 
-        ShipmentInvalidStatusException exception = assertThrows(ShipmentInvalidStatusException.class, () -> shipmentService.markAsInTransit(1L));
+        ShipmentInvalidStatusException exception = assertThrows(ShipmentInvalidStatusException.class, () -> shipmentService.confirmPickup(1L));
 
         assertEquals("Only a shipment with status 'READY_FOR_PICKUP' can be marked as 'IN_TRANSIT'.", exception.getMessage());
         assertEquals(ShipmentStatus.CREATED, shipment.getStatus());
@@ -244,7 +248,7 @@ public class ShipmentServiceTest {
 
         when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
 
-        Shipment updatedShipment = shipmentService.markAsDelivered(1L);
+        Shipment updatedShipment = shipmentService.confirmDelivery(1L);
 
         assertEquals(ShipmentStatus.DELIVERED, updatedShipment.getStatus());
 
@@ -258,7 +262,7 @@ public class ShipmentServiceTest {
 
         when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
 
-        ShipmentInvalidStatusException exception = assertThrows(ShipmentInvalidStatusException.class, () -> shipmentService.markAsDelivered(1L));
+        ShipmentInvalidStatusException exception = assertThrows(ShipmentInvalidStatusException.class, () -> shipmentService.confirmDelivery(1L));
 
         assertEquals("Only a shipment with status 'IN_TRANSIT' can be marked as 'DELIVERED'.", exception.getMessage());
         assertEquals(ShipmentStatus.CREATED, shipment.getStatus());
@@ -273,7 +277,7 @@ public class ShipmentServiceTest {
 
         when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
 
-        Shipment updatedShipment = shipmentService.markAsCancelled(1L);
+        Shipment updatedShipment = shipmentService.cancel(1L);
 
         assertEquals(ShipmentStatus.CANCELLED, updatedShipment.getStatus());
 
@@ -288,7 +292,7 @@ public class ShipmentServiceTest {
 
         when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
 
-        Shipment updatedShipment = shipmentService.markAsCancelled(1L);
+        Shipment updatedShipment = shipmentService.cancel(1L);
 
         assertEquals(ShipmentStatus.CANCELLED, updatedShipment.getStatus());
 
@@ -304,7 +308,7 @@ public class ShipmentServiceTest {
 
         when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
 
-        ShipmentInvalidStatusException exception = assertThrows(ShipmentInvalidStatusException.class, () -> shipmentService.markAsCancelled(1L));
+        ShipmentInvalidStatusException exception = assertThrows(ShipmentInvalidStatusException.class, () -> shipmentService.cancel(1L));
 
         assertEquals("Only a shipment with status 'CREATED' or 'READY_FOR_PICKUP' can be cancelled.", exception.getMessage());
         assertEquals(ShipmentStatus.IN_TRANSIT, shipment.getStatus());
@@ -321,11 +325,11 @@ public class ShipmentServiceTest {
 
         when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
 
-        Shipment deliveredShipment = shipmentService.markAsDelivered(1L);
+        Shipment deliveredShipment = shipmentService.confirmDelivery(1L);
 
         assertEquals(ShipmentStatus.DELIVERED, deliveredShipment.getStatus());
 
-        verify(shipmentAssignmentService).releaseResourcesForShipment(1L);
+        verify(shipmentAssignmentService).completeAssignmentForShipment(1L);
     }
 
     @Test
@@ -335,11 +339,11 @@ public class ShipmentServiceTest {
 
         when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
 
-        Shipment cancelledShipment = shipmentService.markAsCancelled(1L);
+        Shipment cancelledShipment = shipmentService.cancel(1L);
 
         assertEquals(ShipmentStatus.CANCELLED, cancelledShipment.getStatus());
 
-        verify(shipmentAssignmentService).releaseResourcesForShipment(1L);
+        verify(shipmentAssignmentService).cancelAssignmentForShipmentIfPresent(1L);
     }
 
     @Test
@@ -577,6 +581,77 @@ public class ShipmentServiceTest {
 
         assertEquals("If sortBy dont exist, then direction is useless.", exception.getMessage());
         verifyNoInteractions(shipmentRepository);
+    }
+
+    @Test
+    void shouldConfirmPickup() {
+        Shipment shipment = createShipment();
+        shipment.markAsReadyForPickup();
+        Courier courier = new Courier("Adam", "Nowak", "+48 565 423 123");
+        Vehicle vehicle = new Vehicle("Ford", "Ducato", "GD 2313D", VehicleType.VAN, new BigDecimal("124.00"));
+
+        ShipmentAssignment shipmentAssignment = new ShipmentAssignment(shipment, courier, vehicle);
+
+        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
+        when(shipmentAssignmentService.findActiveAssignment(1L)).thenReturn(shipmentAssignment);
+
+        Shipment pickedUpShipment = shipmentService.confirmPickup(1L);
+
+        assertEquals(AssignmentStatus.ACTIVE, shipmentAssignment.getStatus());
+        assertEquals(ShipmentStatus.IN_TRANSIT, pickedUpShipment.getStatus());
+        assertSame(shipment, pickedUpShipment);
+
+        verify(shipmentRepository).findById(1L);
+        verify(shipmentAssignmentService).findActiveAssignment(1L);
+    }
+
+    @Test
+    void shouldThrowWhenActiveAssignmentNotFound() {
+        Shipment shipment = createShipment();
+        shipment.markAsReadyForPickup();
+
+        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
+        when(shipmentAssignmentService.findActiveAssignment(1L)).thenThrow(new ActiveAssignmentNotFoundException(1L));
+
+        ActiveAssignmentNotFoundException exception = assertThrows(ActiveAssignmentNotFoundException.class,() -> shipmentService.confirmPickup(1L));
+
+        assertEquals("Active assignment for shipment with id 1 not found.", exception.getMessage());
+        assertEquals(ShipmentStatus.READY_FOR_PICKUP, shipment.getStatus());
+
+        verify(shipmentRepository).findById(1L);
+        verify(shipmentAssignmentService).findActiveAssignment(1L);
+    }
+
+    @Test
+    void shouldConfirmDelivery() {
+        Shipment shipment = createShipment();
+        shipment.markAsReadyForPickup();
+        shipment.markAsInTransit();
+
+        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
+
+        Shipment deliveredShipment = shipmentService.confirmDelivery(1L);
+
+        assertEquals(ShipmentStatus.DELIVERED, deliveredShipment.getStatus());
+        assertSame(shipment, deliveredShipment);
+
+        verify(shipmentRepository).findById(1L);
+        verify(shipmentAssignmentService).completeAssignmentForShipment(1L);
+    }
+
+    @Test
+    void shouldCancelShipment() {
+        Shipment shipment = createShipment();
+
+        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
+
+        Shipment canceledShipment = shipmentService.cancel(1L);
+
+        assertEquals(ShipmentStatus.CANCELLED, canceledShipment.getStatus());
+        assertSame(shipment, canceledShipment);
+
+        verify(shipmentRepository).findById(1L);
+        verify(shipmentAssignmentService).cancelAssignmentForShipmentIfPresent(1L);
     }
 
 

@@ -1,6 +1,8 @@
 package com.mbugajski.logistics.assignment.service;
 
+import com.mbugajski.logistics.assignment.entity.AssignmentStatus;
 import com.mbugajski.logistics.assignment.entity.ShipmentAssignment;
+import com.mbugajski.logistics.assignment.exception.ActiveAssignmentNotFoundException;
 import com.mbugajski.logistics.assignment.exception.AssignmentParameterInvalidStatus;
 import com.mbugajski.logistics.assignment.exception.AssignmentVehicleOutOfSpaceException;
 import com.mbugajski.logistics.assignment.repository.ShipmentAssignmentRepository;
@@ -88,6 +90,37 @@ public class ShipmentAssignmentService {
 
             shipmentAssignment.getCourier().markAsAvailable();
             shipmentAssignment.getVehicle().markAsAvailable();
+        }
+    }
+
+    public ShipmentAssignment findActiveAssignment(Long shipmentId) {
+        if (shipmentId == null || shipmentId <= 0) {
+            throw new IllegalArgumentException("Shipment ID cannot be null, zero or below.");
+        }
+
+        return assignmentRepository
+                .findByShipmentIdAndStatus(shipmentId, AssignmentStatus.ACTIVE)
+                .orElseThrow(() -> new ActiveAssignmentNotFoundException(shipmentId));
+    }
+
+    @Transactional
+    public void completeAssignmentForShipment(Long shipmentId) {
+        ShipmentAssignment assignment = findActiveAssignment(shipmentId);
+        assignment.complete();
+        assignment.getCourier().markAsAvailable();
+        assignment.getVehicle().markAsAvailable();
+    }
+
+    @Transactional
+    public void cancelAssignmentForShipmentIfPresent(Long shipmentId) {
+        Optional<ShipmentAssignment> foundAssignment = assignmentRepository.findByShipmentIdAndStatus(shipmentId, AssignmentStatus.ACTIVE);
+
+        if (foundAssignment.isPresent()) {
+            ShipmentAssignment assignment = foundAssignment.get();
+            
+            assignment.cancel();
+            assignment.getCourier().markAsAvailable();
+            assignment.getVehicle().markAsAvailable();
         }
     }
 }

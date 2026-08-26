@@ -1,7 +1,9 @@
 package com.mbugajski.logistics.assignment;
 
 import com.mbugajski.logistics.address.entity.Address;
+import com.mbugajski.logistics.assignment.entity.AssignmentStatus;
 import com.mbugajski.logistics.assignment.entity.ShipmentAssignment;
+import com.mbugajski.logistics.assignment.exception.ActiveAssignmentNotFoundException;
 import com.mbugajski.logistics.assignment.exception.AssignmentParameterInvalidStatus;
 import com.mbugajski.logistics.assignment.exception.AssignmentVehicleOutOfSpaceException;
 import com.mbugajski.logistics.assignment.repository.ShipmentAssignmentRepository;
@@ -326,6 +328,121 @@ public class ShipmentAssignmentServiceTest {
         assertEquals("Shipment ID cannot be null, zero or below.", exception.getMessage());
 
         verifyNoInteractions(assignmentRepository);
+    }
+
+    @Test
+    void shouldReturnActiveAssignment() {
+        ShipmentAssignment shipmentAssignment = new ShipmentAssignment(createShipment(), createCourier(), createVehicle());
+
+        when(assignmentRepository.findByShipmentIdAndStatus(1L, AssignmentStatus.ACTIVE)).thenReturn(Optional.of(shipmentAssignment));
+
+        ShipmentAssignment foundAssignment = shipmentAssignmentService.findActiveAssignment(1L);
+
+        assertSame(shipmentAssignment, foundAssignment);
+        assertEquals(AssignmentStatus.ACTIVE, foundAssignment.getStatus());
+
+        verify(assignmentRepository).findByShipmentIdAndStatus(1L, AssignmentStatus.ACTIVE);
+    }
+
+    @Test
+    void shouldThrowWhenActiveAssignmentNotFound() {
+        when(assignmentRepository.findByShipmentIdAndStatus(1L, AssignmentStatus.ACTIVE)).thenReturn(Optional.empty());
+
+        ActiveAssignmentNotFoundException exception = assertThrows(ActiveAssignmentNotFoundException.class,() -> shipmentAssignmentService.findActiveAssignment(1L));
+
+        assertEquals("Active assignment for shipment with id 1 not found.", exception.getMessage());
+
+        verify(assignmentRepository).findByShipmentIdAndStatus(1L, AssignmentStatus.ACTIVE);
+    }
+
+    @Test
+    void shouldThrowWhenGivenNullParam() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,() -> shipmentAssignmentService.findActiveAssignment(null));
+
+        assertEquals("Shipment ID cannot be null, zero or below.", exception.getMessage());
+
+        verifyNoInteractions(assignmentRepository);
+    }
+
+    @Test
+    void shouldThrowWhenGivenNegativeParam() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,() -> shipmentAssignmentService.findActiveAssignment(-1L));
+
+        assertEquals("Shipment ID cannot be null, zero or below.", exception.getMessage());
+
+        verifyNoInteractions(assignmentRepository);
+    }
+
+    @Test
+    void shouldThrowWhenGivenZeroParam() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,() -> shipmentAssignmentService.findActiveAssignment(0L));
+
+        assertEquals("Shipment ID cannot be null, zero or below.", exception.getMessage());
+
+        verifyNoInteractions(assignmentRepository);
+    }
+
+    @Test
+    void shouldCompleteAssignmentForShipment() {
+        Shipment shipment = createShipment();
+        Courier courier = createCourier();
+        Vehicle vehicle = createVehicle();
+
+        courier.markAsBusy();
+        vehicle.markAsBusy();
+
+        ShipmentAssignment assignment = new ShipmentAssignment(shipment, courier, vehicle);
+
+        when(assignmentRepository.findByShipmentIdAndStatus(1L, AssignmentStatus.ACTIVE)).thenReturn(Optional.of(assignment));
+
+        assertEquals(AssignmentStatus.ACTIVE, assignment.getStatus());
+        assertNull(assignment.getFinishedAt());
+
+        shipmentAssignmentService.completeAssignmentForShipment(1L);
+
+        assertTrue(assignment.getCourier().isAvailable());
+        assertTrue(assignment.getVehicle().isAvailable());
+
+        assertEquals(AssignmentStatus.COMPLETED, assignment.getStatus());
+        assertNotNull(assignment.getFinishedAt());
+
+        verify(assignmentRepository).findByShipmentIdAndStatus(1L, AssignmentStatus.ACTIVE);
+    }
+
+    @Test
+    void shouldCancelAssignmentForShipmentIfPresent() {
+        Shipment shipment = createShipment();
+        Courier courier = createCourier();
+        Vehicle vehicle = createVehicle();
+
+        courier.markAsBusy();
+        vehicle.markAsBusy();
+
+        ShipmentAssignment assignment = new ShipmentAssignment(shipment, courier, vehicle);
+
+        when(assignmentRepository.findByShipmentIdAndStatus(1L, AssignmentStatus.ACTIVE)).thenReturn(Optional.of(assignment));
+
+        assertEquals(AssignmentStatus.ACTIVE, assignment.getStatus());
+        assertNull(assignment.getFinishedAt());
+
+        shipmentAssignmentService.cancelAssignmentForShipmentIfPresent(1L);
+
+        assertTrue(assignment.getCourier().isAvailable());
+        assertTrue(assignment.getVehicle().isAvailable());
+
+        assertEquals(AssignmentStatus.CANCELLED, assignment.getStatus());
+        assertNotNull(assignment.getFinishedAt());
+
+        verify(assignmentRepository).findByShipmentIdAndStatus(1L, AssignmentStatus.ACTIVE);
+    }
+
+    @Test
+    void shouldDoNothingWhenActiveAssignmentNotFound() {
+        when(assignmentRepository.findByShipmentIdAndStatus(1L, AssignmentStatus.ACTIVE)).thenReturn(Optional.empty());
+
+        assertDoesNotThrow(() -> shipmentAssignmentService.cancelAssignmentForShipmentIfPresent(1L));
+
+        verify(assignmentRepository).findByShipmentIdAndStatus(1L, AssignmentStatus.ACTIVE);
     }
 
     private Shipment createShipment() {
