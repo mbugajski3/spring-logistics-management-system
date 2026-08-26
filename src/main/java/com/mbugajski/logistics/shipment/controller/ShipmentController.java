@@ -9,12 +9,9 @@ import com.mbugajski.logistics.shipment.mapper.ShipmentMapper;
 import com.mbugajski.logistics.shipment.repository.ShipmentSortBy;
 import com.mbugajski.logistics.shipment.service.ShipmentService;
 import jakarta.validation.Valid;
-import org.hibernate.query.SortDirection;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/shipments")
@@ -56,30 +53,23 @@ public class ShipmentController {
         return ShipmentMapper.toResponse(shipment);
     }
 
-    @PatchMapping("/{shipmentId}/ready-for-pickup")
-    public ShipmentResponse markAsReadyForPickup(@PathVariable Long shipmentId) {
-        Shipment shipment = shipmentService.markAsReadyForPickup(shipmentId);
+    @PatchMapping("/{shipmentId}/confirm-pickup")
+    public ShipmentResponse confirmPickup(@PathVariable Long shipmentId) {
+        Shipment shipment = shipmentService.confirmPickup(shipmentId);
 
         return ShipmentMapper.toResponse(shipment);
     }
 
-    @PatchMapping("/{shipmentId}/in-transit")
-    public ShipmentResponse markAsInTransit(@PathVariable Long shipmentId) {
-        Shipment shipment = shipmentService.markAsInTransit(shipmentId);
+    @PatchMapping("/{shipmentId}/confirm-delivery")
+    public ShipmentResponse confirmDelivery(@PathVariable Long shipmentId) {
+        Shipment shipment = shipmentService.confirmDelivery(shipmentId);
 
         return ShipmentMapper.toResponse(shipment);
     }
 
-    @PatchMapping("/{shipmentId}/delivered")
-    public ShipmentResponse markAsDelivered(@PathVariable Long shipmentId) {
-        Shipment shipment = shipmentService.markAsDelivered(shipmentId);
-
-        return ShipmentMapper.toResponse(shipment);
-    }
-
-    @PatchMapping("/{shipmentId}/cancelled")
-    public ShipmentResponse markAsCancelled(@PathVariable Long shipmentId) {
-        Shipment shipment = shipmentService.markAsCancelled(shipmentId);
+    @PatchMapping("/{shipmentId}/cancel")
+    public ShipmentResponse cancel(@PathVariable Long shipmentId) {
+        Shipment shipment = shipmentService.cancel(shipmentId);
 
         return ShipmentMapper.toResponse(shipment);
     }

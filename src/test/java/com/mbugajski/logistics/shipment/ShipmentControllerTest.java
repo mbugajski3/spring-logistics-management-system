@@ -11,7 +11,6 @@ import com.mbugajski.logistics.shipment.exception.ShipmentInvalidStatusException
 import com.mbugajski.logistics.shipment.exception.ShipmentNotFoundException;
 import com.mbugajski.logistics.shipment.repository.ShipmentSortBy;
 import com.mbugajski.logistics.shipment.service.ShipmentService;
-import org.hibernate.query.SortDirection;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -109,32 +108,6 @@ public class ShipmentControllerTest {
     }
 
     @Test
-    void shouldChangeStatusToReadyForPickup() throws Exception {
-        Customer customer = new Customer(
-                "Adrian",
-                "Nowak",
-                "adrian@nowak.com",
-                "+48 782 230 124",
-                createAddress()
-        );
-
-        Shipment shipment = createShipment(customer);
-        ReflectionTestUtils.setField(shipment, "id", 1L);
-
-        shipment.markAsReadyForPickup();
-
-        when(shipmentService.markAsReadyForPickup(1L))
-                .thenReturn(shipment);
-
-        mockMvc.perform(patch("/api/shipments/1/ready-for-pickup"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.status").value("READY_FOR_PICKUP"));
-
-        verify(shipmentService).markAsReadyForPickup(1L);
-    }
-
-    @Test
     void shouldChangeStatusToInTransit() throws Exception {
         Customer customer = new Customer(
                 "Adrian",
@@ -150,15 +123,15 @@ public class ShipmentControllerTest {
         shipment.markAsReadyForPickup();
         shipment.markAsInTransit();
 
-        when(shipmentService.markAsInTransit(1L))
+        when(shipmentService.confirmPickup(1L))
                 .thenReturn(shipment);
 
-        mockMvc.perform(patch("/api/shipments/1/in-transit"))
+        mockMvc.perform(patch("/api/shipments/1/confirm-pickup"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.status").value("IN_TRANSIT"));
 
-        verify(shipmentService).markAsInTransit(1L);
+        verify(shipmentService).confirmPickup(1L);
     }
 
     @Test
@@ -178,15 +151,15 @@ public class ShipmentControllerTest {
         shipment.markAsInTransit();
         shipment.markAsDelivered();
 
-        when(shipmentService.markAsDelivered(1L))
+        when(shipmentService.confirmDelivery(1L))
                 .thenReturn(shipment);
 
-        mockMvc.perform(patch("/api/shipments/1/delivered"))
+        mockMvc.perform(patch("/api/shipments/1/confirm-delivery"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.status").value("DELIVERED"));
 
-        verify(shipmentService).markAsDelivered(1L);
+        verify(shipmentService).confirmDelivery(1L);
     }
 
     @Test
@@ -205,15 +178,15 @@ public class ShipmentControllerTest {
         shipment.markAsReadyForPickup();
         shipment.markAsCancelled();
 
-        when(shipmentService.markAsCancelled(1L))
+        when(shipmentService.cancel(1L))
                 .thenReturn(shipment);
 
-        mockMvc.perform(patch("/api/shipments/1/cancelled"))
+        mockMvc.perform(patch("/api/shipments/1/cancel"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
 
-        verify(shipmentService).markAsCancelled(1L);
+        verify(shipmentService).cancel(1L);
     }
 
     @Test
@@ -232,16 +205,16 @@ public class ShipmentControllerTest {
 
     @Test
     void shouldReturnConflictWhenShipmentHasInvalidStatus() throws Exception {
-        when(shipmentService.markAsDelivered(1L)).thenThrow(new ShipmentInvalidStatusException("Only a shipment with status 'IN_TRANSIT' can be marked as 'DELIVERED'."));
+        when(shipmentService.confirmDelivery(1L)).thenThrow(new ShipmentInvalidStatusException("Only a shipment with status 'IN_TRANSIT' can be marked as 'DELIVERED'."));
 
-        mockMvc.perform(patch("/api/shipments/1/delivered"))
+        mockMvc.perform(patch("/api/shipments/1/confirm-delivery"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409))
                 .andExpect(jsonPath("$.error").value("CONFLICT"))
                 .andExpect(jsonPath("$.message").value("Only a shipment with status 'IN_TRANSIT' can be marked as 'DELIVERED'."))
                 .andExpect(jsonPath("$.timestamp").exists());
 
-        verify(shipmentService).markAsDelivered(1L);
+        verify(shipmentService).confirmDelivery(1L);
     }
 
     @Test

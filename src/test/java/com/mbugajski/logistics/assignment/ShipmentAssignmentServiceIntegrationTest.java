@@ -2,6 +2,7 @@ package com.mbugajski.logistics.assignment;
 
 import com.mbugajski.logistics.address.entity.Address;
 import com.mbugajski.logistics.address.repository.AddressRepository;
+import com.mbugajski.logistics.assignment.entity.AssignmentStatus;
 import com.mbugajski.logistics.assignment.entity.ShipmentAssignment;
 import com.mbugajski.logistics.assignment.repository.ShipmentAssignmentRepository;
 import com.mbugajski.logistics.assignment.service.ShipmentAssignmentService;
@@ -27,6 +28,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -171,8 +173,8 @@ public class ShipmentAssignmentServiceIntegrationTest {
         assertEquals(1L, shipmentAssignmentRepository.count());
         assertTrue(shipmentAssignmentRepository.existsById(shipmentAssignment.getId()));
 
-        shipmentService.markAsInTransit(shipmentFound.getId());
-        shipmentService.markAsDelivered(shipmentFound.getId());
+        shipmentService.confirmPickup(shipmentFound.getId());
+        shipmentService.confirmDelivery(shipmentFound.getId());
 
         shipmentAssignmentRepository.flush();
         entityManager.clear();
@@ -226,7 +228,7 @@ public class ShipmentAssignmentServiceIntegrationTest {
         assertEquals(1L, shipmentAssignmentRepository.count());
         assertTrue(shipmentAssignmentRepository.existsById(shipmentAssignment.getId()));
 
-        shipmentService.markAsCancelled(shipmentFound.getId());
+        shipmentService.cancel(shipmentFound.getId());
 
         shipmentAssignmentRepository.flush();
         entityManager.clear();
@@ -240,6 +242,103 @@ public class ShipmentAssignmentServiceIntegrationTest {
         assertTrue(cancelledVehicle.isAvailable());
 
         assertEquals(1L, shipmentAssignmentRepository.count());
+    }
+
+    @Test
+    void shouldCancelShipment() {
+        Address customerAddress = createCustomerAddress();
+        addressRepository.saveAndFlush(customerAddress);
+
+        Customer customer = createCustomer(customerAddress);
+        customerRepository.saveAndFlush(customer);
+
+        Address deliveryAddress = createDeliveryAddress();
+        addressRepository.saveAndFlush(deliveryAddress);
+
+        Shipment shipment = createShipment(customerAddress, customer, deliveryAddress);
+        shipmentRepository.saveAndFlush(shipment);
+
+        Courier courier = createCourier();
+        courierRepository.saveAndFlush(courier);
+
+        Vehicle vehicle = createVehicle();
+        vehicleRepository.saveAndFlush(vehicle);
+
+        assertEquals(0L, shipmentAssignmentRepository.count());
+        assertTrue(courier.isAvailable());
+        assertTrue(vehicle.isAvailable());
+        assertEquals(ShipmentStatus.CREATED, shipment.getStatus());
+
+        ShipmentAssignment shipmentAssignment = shipmentAssignmentService.assign(shipment.getId(), courier.getId(), vehicle.getId());
+
+        Shipment shipmentFound = shipmentRepository.findById(shipment.getId()).orElseThrow();
+        Courier courierFound = courierRepository.findById(courier.getId()).orElseThrow();
+        Vehicle vehicleFound = vehicleRepository.findById(vehicle.getId()).orElseThrow();
+
+        assertEquals(ShipmentStatus.READY_FOR_PICKUP, shipmentFound.getStatus());
+        assertFalse(courierFound.isAvailable());
+        assertFalse(vehicleFound.isAvailable());
+        assertEquals(1L, shipmentAssignmentRepository.count());
+        assertTrue(shipmentAssignmentRepository.existsById(shipmentAssignment.getId()));
+
+        shipmentService.cancel(shipmentFound.getId());
+
+        entityManager.flush();
+        entityManager.clear();
+
+        Shipment canceledShipment = shipmentRepository.findById(shipment.getId()).orElseThrow();
+        Courier canceledCourier = courierRepository.findById(courier.getId()).orElseThrow();
+        Vehicle canceledVehicle = vehicleRepository.findById(vehicle.getId()).orElseThrow();
+        ShipmentAssignment canceledAssignment = shipmentAssignmentRepository.findById(shipmentAssignment.getId()).orElseThrow();
+
+        assertEquals(ShipmentStatus.CANCELLED, canceledShipment.getStatus());
+        assertTrue(canceledCourier.isAvailable());
+        assertTrue(canceledVehicle.isAvailable());
+        assertEquals(AssignmentStatus.CANCELLED, canceledAssignment.getStatus());
+        assertNotNull(canceledAssignment.getFinishedAt());
+        assertEquals(1L, shipmentAssignmentRepository.count());
+    }
+
+    @Test
+    void shouldCancelWithoutAssignment() {
+        Address customerAddress = createCustomerAddress();
+        addressRepository.saveAndFlush(customerAddress);
+
+        Customer customer = createCustomer(customerAddress);
+        customerRepository.saveAndFlush(customer);
+
+        Address deliveryAddress = createDeliveryAddress();
+        addressRepository.saveAndFlush(deliveryAddress);
+
+        Shipment shipment = createShipment(customerAddress, customer, deliveryAddress);
+        shipmentRepository.saveAndFlush(shipment);
+
+        Courier courier = createCourier();
+        courierRepository.saveAndFlush(courier);
+
+        Vehicle vehicle = createVehicle();
+        vehicleRepository.saveAndFlush(vehicle);
+
+        assertEquals(0L, shipmentAssignmentRepository.count());
+        assertTrue(courier.isAvailable());
+        assertTrue(vehicle.isAvailable());
+        assertEquals(ShipmentStatus.CREATED, shipment.getStatus());
+
+        Shipment shipmentFound = shipmentRepository.findById(shipment.getId()).orElseThrow();
+
+        shipmentService.cancel(shipmentFound.getId());
+
+        entityManager.flush();
+        entityManager.clear();
+
+        Shipment canceledShipment = shipmentRepository.findById(shipment.getId()).orElseThrow();
+        Courier canceledCourier = courierRepository.findById(courier.getId()).orElseThrow();
+        Vehicle canceledVehicle = vehicleRepository.findById(vehicle.getId()).orElseThrow();
+
+        assertEquals(ShipmentStatus.CANCELLED, canceledShipment.getStatus());
+        assertTrue(canceledCourier.isAvailable());
+        assertTrue(canceledVehicle.isAvailable());
+        assertEquals(0L, shipmentAssignmentRepository.count());
     }
 
 
