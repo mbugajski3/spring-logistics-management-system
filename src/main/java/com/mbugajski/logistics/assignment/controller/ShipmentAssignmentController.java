@@ -26,4 +26,11 @@ public class ShipmentAssignmentController {
 
         return ShipmentAssignmentMapper.toResponse(shipmentAssignment);
     }
+
+    @PatchMapping("/{shipmentId}/reassign")
+    public ShipmentAssignmentResponse reassign(@PathVariable Long shipmentId) {
+        ShipmentAssignment shipmentAssignment = shipmentAssignmentService.reassign(shipmentId);
+
+        return ShipmentAssignmentMapper.toResponse(shipmentAssignment);
+    }
 }

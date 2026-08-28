@@ -3,7 +3,9 @@ package com.mbugajski.logistics.assignment;
 import com.mbugajski.logistics.address.entity.Address;
 import com.mbugajski.logistics.assignment.controller.ShipmentAssignmentController;
 import com.mbugajski.logistics.assignment.dto.request.CreateShipmentAssignmentRequest;
+import com.mbugajski.logistics.assignment.entity.AssignmentStatus;
 import com.mbugajski.logistics.assignment.entity.ShipmentAssignment;
+import com.mbugajski.logistics.assignment.exception.ActiveAssignmentNotFoundException;
 import com.mbugajski.logistics.assignment.exception.AssignmentParameterInvalidStatus;
 import com.mbugajski.logistics.assignment.exception.AssignmentVehicleOutOfSpaceException;
 import com.mbugajski.logistics.assignment.service.ShipmentAssignmentService;
@@ -14,6 +16,7 @@ import com.mbugajski.logistics.courier.exception.CourierInvalidStateException;
 import com.mbugajski.logistics.courier.exception.CourierNotFoundException;
 import com.mbugajski.logistics.customer.entity.Customer;
 import com.mbugajski.logistics.shipment.entity.Shipment;
+import com.mbugajski.logistics.shipment.exception.ShipmentInvalidStatusException;
 import com.mbugajski.logistics.shipment.exception.ShipmentNotFoundException;
 import com.mbugajski.logistics.vehicle.entity.Vehicle;
 import com.mbugajski.logistics.vehicle.entity.VehicleType;
@@ -80,7 +83,10 @@ public class ShipmentAssignmentControllerTest {
                 .andExpect(jsonPath("$.assignmentId").value(4L))
                 .andExpect(jsonPath("$.shipmentId").value(1L))
                 .andExpect(jsonPath("$.courierId").value(2L))
-                .andExpect(jsonPath("$.vehicleId").value(3L));
+                .andExpect(jsonPath("$.vehicleId").value(3L))
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.assignedAt").exists())
+                .andExpect(jsonPath("$.finishedAt").isEmpty());
 
         verify(shipmentAssignmentService).assign(1L, 2L, 3L);
     }
@@ -317,6 +323,106 @@ public class ShipmentAssignmentControllerTest {
                 .andExpect(jsonPath("$.timestamp").exists());
 
         verify(shipmentAssignmentService).assign(1L, 2L, 3L);
+    }
+
+    @Test
+    void shouldReassignShipment() throws Exception {
+        Shipment shipment = createShipment();
+        Courier courier = createCourier();
+        courier.markAsBusy();
+
+        Vehicle vehicle = createVehicle();
+        vehicle.markAsBusy();
+
+        ShipmentAssignment shipmentAssignment = new ShipmentAssignment(shipment, courier, vehicle);
+        ReflectionTestUtils.setField(shipmentAssignment, "id", 1L);
+        ReflectionTestUtils.setField(shipment, "id", 1L);
+        ReflectionTestUtils.setField(courier, "id", 1L);
+        ReflectionTestUtils.setField(vehicle, "id", 1L);
+
+        when(shipmentAssignmentService.reassign(1L)).thenReturn(shipmentAssignment);
+
+        mockMvc.perform(patch("/api/shipments/1/reassign"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.assignmentId").value(1L))
+                .andExpect(jsonPath("$.shipmentId").value(1L))
+                .andExpect(jsonPath("$.courierId").value(1L))
+                .andExpect(jsonPath("$.vehicleId").value(1L))
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.assignedAt").exists())
+                .andExpect(jsonPath("$.finishedAt").isEmpty());;
+
+        verify(shipmentAssignmentService).reassign(1L);
+    }
+
+    @Test
+    void shouldThrowWhenShipmentNotFound() throws Exception {
+        when(shipmentAssignmentService.reassign(1L)).thenThrow(new ShipmentNotFoundException(1L));
+
+        mockMvc.perform(patch("/api/shipments/1/reassign"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
+                .andExpect(jsonPath("$.error").value(HttpStatus.NOT_FOUND.name()))
+                .andExpect(jsonPath("$.message").value("Shipment with id 1 not found."))
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        verify(shipmentAssignmentService).reassign(1L);
+    }
+
+    @Test
+    void shouldThrowWhenShipmentHasInvalidStatus() throws Exception {
+        when(shipmentAssignmentService.reassign(1L)).thenThrow(new ShipmentInvalidStatusException("Shipment status must be 'READY_FOR_PICKUP' to reassign."));
+
+        mockMvc.perform(patch("/api/shipments/1/reassign"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(HttpStatus.CONFLICT.value()))
+                .andExpect(jsonPath("$.error").value(HttpStatus.CONFLICT.name()))
+                .andExpect(jsonPath("$.message").value("Shipment status must be 'READY_FOR_PICKUP' to reassign."))
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        verify(shipmentAssignmentService).reassign(1L);
+    }
+
+    @Test
+    void shouldThrowWhenCourierNotFound() throws Exception {
+        when(shipmentAssignmentService.reassign(1L)).thenThrow(new CourierNotFoundException());
+
+        mockMvc.perform(patch("/api/shipments/1/reassign"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
+                .andExpect(jsonPath("$.error").value(HttpStatus.NOT_FOUND.name()))
+                .andExpect(jsonPath("$.message").value("Available courier not found."))
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        verify(shipmentAssignmentService).reassign(1L);
+    }
+
+    @Test
+    void shouldThrowWhenVehicleNotFound() throws Exception {
+        when(shipmentAssignmentService.reassign(1L)).thenThrow(new VehicleNotFoundException(new BigDecimal("20.00")));
+
+        mockMvc.perform(patch("/api/shipments/1/reassign"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
+                .andExpect(jsonPath("$.error").value(HttpStatus.NOT_FOUND.name()))
+                .andExpect(jsonPath("$.message").value("No suitable vehicle available for shipment weighing 20.00 kg."))
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        verify(shipmentAssignmentService).reassign(1L);
+    }
+
+    @Test
+    void shouldThrowWhenActiveAssignmentNotFound() throws Exception {
+        when(shipmentAssignmentService.reassign(1L)).thenThrow(new ActiveAssignmentNotFoundException(1L));
+
+        mockMvc.perform(patch("/api/shipments/1/reassign"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
+                .andExpect(jsonPath("$.error").value(HttpStatus.NOT_FOUND.name()))
+                .andExpect(jsonPath("$.message").value("Active assignment for shipment with id 1 not found."))
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        verify(shipmentAssignmentService).reassign(1L);
     }
 
     private Shipment createShipment() {

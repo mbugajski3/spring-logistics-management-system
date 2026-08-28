@@ -9,7 +9,10 @@ public class ShipmentAssignmentMapper {
                 assignment.getId(),
                 assignment.getShipment().getId(),
                 assignment.getCourier().getId(),
-                assignment.getVehicle().getId()
+                assignment.getVehicle().getId(),
+                assignment.getStatus(),
+                assignment.getAssignedAt(),
+                assignment.getFinishedAt()
         );
     }
 }

@@ -15,6 +15,7 @@ import com.mbugajski.logistics.courier.repository.CourierRepository;
 import com.mbugajski.logistics.customer.entity.Customer;
 import com.mbugajski.logistics.shipment.entity.Shipment;
 import com.mbugajski.logistics.shipment.entity.ShipmentStatus;
+import com.mbugajski.logistics.shipment.exception.ShipmentInvalidStatusException;
 import com.mbugajski.logistics.shipment.exception.ShipmentNotFoundException;
 import com.mbugajski.logistics.shipment.repository.ShipmentRepository;
 import com.mbugajski.logistics.vehicle.entity.Vehicle;
@@ -445,6 +446,170 @@ public class ShipmentAssignmentServiceTest {
         verify(assignmentRepository).findByShipmentIdAndStatus(1L, AssignmentStatus.ACTIVE);
     }
 
+    @Test
+    void shouldReassign() {
+        Shipment shipment = createShipment();
+        Courier courier = createCourier();
+        Vehicle vehicle = createVehicle();
+
+        courier.markAsBusy();
+        vehicle.markAsBusy();
+        shipment.markAsReadyForPickup();
+
+        Courier reassignedCourier = createReassignedCourier();
+        Vehicle reassignedVehicle = createReassignedVehicle();
+
+        ShipmentAssignment createdAssignment = new ShipmentAssignment(shipment, courier, vehicle);
+
+        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
+        when(courierRepository.findFirstByAvailableTrue()).thenReturn(Optional.of(reassignedCourier));
+        when(vehicleRepository.findFirstByAvailableTrueAndMaximumLoadGreaterThanEqualOrderByMaximumLoadAsc(shipment.getWeight())).thenReturn(Optional.of(reassignedVehicle));
+        when(assignmentRepository.findByShipmentIdAndStatus(1L, AssignmentStatus.ACTIVE)).thenReturn(Optional.of(createdAssignment));
+
+        ShipmentAssignment reassigned = shipmentAssignmentService.reassign(1L);
+
+        assertEquals(AssignmentStatus.ACTIVE, reassigned.getStatus());
+        assertEquals(AssignmentStatus.REASSIGNED, createdAssignment.getStatus());
+        assertNotNull(createdAssignment.getFinishedAt());
+        assertTrue(createdAssignment.getCourier().isAvailable());
+        assertTrue(createdAssignment.getVehicle().isAvailable());
+        assertFalse(reassigned.getCourier().isAvailable());
+        assertFalse(reassigned.getVehicle().isAvailable());
+        assertNull(reassigned.getFinishedAt());
+        assertSame(reassignedCourier, reassigned.getCourier());
+        assertSame(reassignedVehicle, reassigned.getVehicle());
+        assertEquals(ShipmentStatus.READY_FOR_PICKUP, reassigned.getShipment().getStatus());
+        assertSame(shipment, reassigned.getShipment());
+        verify(assignmentRepository).findByShipmentIdAndStatus(1L, AssignmentStatus.ACTIVE);
+        verify(courierRepository).findFirstByAvailableTrue();
+        verify(vehicleRepository).findFirstByAvailableTrueAndMaximumLoadGreaterThanEqualOrderByMaximumLoadAsc(shipment.getWeight());
+
+        verify(assignmentRepository).save(reassigned);
+    }
+
+    @Test
+    void shouldThrowWhenShipmentStatusIsInvalid() {
+        Shipment shipment = createShipment();
+        shipment.markAsReadyForPickup();
+        shipment.markAsInTransit();
+
+        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
+
+        ShipmentInvalidStatusException exception = assertThrows(ShipmentInvalidStatusException.class,() -> shipmentAssignmentService.reassign(1L));
+
+        assertEquals("Shipment status must be 'READY_FOR_PICKUP' to reassign.", exception.getMessage());
+
+        verify(shipmentRepository).findById(1L);
+        verifyNoInteractions(courierRepository);
+        verifyNoInteractions(vehicleRepository);
+        verifyNoInteractions(assignmentRepository);
+    }
+
+    @Test
+    void shouldThrowWhenVehicleOutOfSpace() {
+        Shipment shipment = createShipment();
+        Courier courier = createCourier();
+        Vehicle vehicle = createVehicle();
+
+        courier.markAsBusy();
+        vehicle.markAsBusy();
+        shipment.markAsReadyForPickup();
+
+        ShipmentAssignment shipmentAssignment = new ShipmentAssignment(shipment, courier, vehicle);
+
+        Courier reassignedCourier = createReassignedCourier();
+        Vehicle reassignedVehicle = new Vehicle("Dacia", "Overweight", "GD 8142D", VehicleType.VAN, new BigDecimal("1.00"));
+
+        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
+        when(courierRepository.findFirstByAvailableTrue()).thenReturn(Optional.of(reassignedCourier));
+        when(vehicleRepository.findFirstByAvailableTrueAndMaximumLoadGreaterThanEqualOrderByMaximumLoadAsc(shipment.getWeight())).thenReturn(Optional.of(reassignedVehicle));
+        when(assignmentRepository.findByShipmentIdAndStatus(1L, AssignmentStatus.ACTIVE)).thenReturn(Optional.of(shipmentAssignment));
+
+        AssignmentVehicleOutOfSpaceException exception = assertThrows(AssignmentVehicleOutOfSpaceException.class,() -> shipmentAssignmentService.reassign(1L));
+
+        assertEquals("Shipment weight is too big.", exception.getMessage());
+        assertEquals(AssignmentStatus.ACTIVE, shipmentAssignment.getStatus());
+        assertSame(courier, shipmentAssignment.getCourier());
+        assertSame(vehicle, shipmentAssignment.getVehicle());
+        assertNull(shipmentAssignment.getFinishedAt());
+
+        assertFalse(courier.isAvailable());
+        assertFalse(vehicle.isAvailable());
+
+        assertTrue(reassignedCourier.isAvailable());
+        assertTrue(reassignedVehicle.isAvailable());
+
+
+        verify(shipmentRepository).findById(1L);
+        verify(assignmentRepository, never()).save(any(ShipmentAssignment.class));
+    }
+
+    @Test
+    void shouldThrowWhenNotFoundMatchingVehicleToShipmentWeight() {
+        Shipment shipment = createShipment();
+        Courier courier = createCourier();
+        Vehicle vehicle = createVehicle();
+
+        courier.markAsBusy();
+        vehicle.markAsBusy();
+        shipment.markAsReadyForPickup();
+
+        Vehicle reassignedVehicle = createReassignedVehicle();
+
+        ShipmentAssignment createdAssignment = new ShipmentAssignment(shipment, courier, vehicle);
+
+        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
+        when(assignmentRepository.findByShipmentIdAndStatus(1L, AssignmentStatus.ACTIVE)).thenReturn(Optional.of(createdAssignment));
+        when(courierRepository.findFirstByAvailableTrue()).thenReturn(Optional.empty());
+
+        CourierNotFoundException exception = assertThrows(CourierNotFoundException.class,() -> shipmentAssignmentService.reassign(1L));
+
+        assertEquals("Available courier not found.", exception.getMessage());
+        assertFalse(createdAssignment.getCourier().isAvailable());
+        assertFalse(createdAssignment.getVehicle().isAvailable());
+        assertEquals(AssignmentStatus.ACTIVE, createdAssignment.getStatus());
+        assertNull(createdAssignment.getFinishedAt());
+        assertTrue(reassignedVehicle.isAvailable());
+
+        verify(shipmentRepository).findById(1L);
+        verifyNoInteractions(vehicleRepository);
+        verify(assignmentRepository, never()).save(any(ShipmentAssignment.class));
+    }
+
+    @Test
+    void shouldThrowWhenMatchingVehicleNotFound() {
+        Shipment shipment = createShipment();
+        Courier courier = createCourier();
+        Vehicle vehicle = createVehicle();
+
+        courier.markAsBusy();
+        vehicle.markAsBusy();
+        shipment.markAsReadyForPickup();
+
+        Courier reassignedCourier = createReassignedCourier();
+
+        ShipmentAssignment createdAssignment = new ShipmentAssignment(shipment, courier, vehicle);
+
+        when(shipmentRepository.findById(1L)).thenReturn(Optional.of(shipment));
+        when(assignmentRepository.findByShipmentIdAndStatus(1L, AssignmentStatus.ACTIVE)).thenReturn(Optional.of(createdAssignment));
+        when(courierRepository.findFirstByAvailableTrue()).thenReturn(Optional.of(reassignedCourier));
+        when(vehicleRepository.findFirstByAvailableTrueAndMaximumLoadGreaterThanEqualOrderByMaximumLoadAsc(shipment.getWeight())).thenReturn(Optional.empty());
+
+        VehicleNotFoundException exception = assertThrows(VehicleNotFoundException.class,() -> shipmentAssignmentService.reassign(1L));
+
+        assertEquals("No suitable vehicle available for shipment weighing 5.00 kg.", exception.getMessage());
+        assertFalse(createdAssignment.getCourier().isAvailable());
+        assertFalse(createdAssignment.getVehicle().isAvailable());
+        assertEquals(AssignmentStatus.ACTIVE, createdAssignment.getStatus());
+        assertNull(createdAssignment.getFinishedAt());
+        assertTrue(reassignedCourier.isAvailable());
+
+        verify(shipmentRepository).findById(1L);
+        verify(assignmentRepository, never()).save(any(ShipmentAssignment.class));
+        verify(courierRepository).findFirstByAvailableTrue();
+        verify(vehicleRepository).findFirstByAvailableTrueAndMaximumLoadGreaterThanEqualOrderByMaximumLoadAsc(shipment.getWeight());
+    }
+
     private Shipment createShipment() {
         Address customerAddress = new Address("Adrianowa", "20", "14", "Kielce", "50-231", "Poland");
         Address deliveryAddress = new Address("Wysyłkowa", "13", "3", "Krakow", "60-123", "Poland");
@@ -467,8 +632,17 @@ public class ShipmentAssignmentServiceTest {
         return new Courier("Postman", "Pat", "+48 999 234 523");
     }
 
+    private Courier createReassignedCourier() {
+        return new Courier("Reassign", "Pat", "+48 999 234 523");
+    }
+
+
     private Vehicle createVehicle() {
         return new Vehicle("Ford", "Transport", "GD 9231L", VehicleType.VAN, new BigDecimal("700.00"));
+    }
+
+    private Vehicle createReassignedVehicle() {
+        return new Vehicle("Reassign", "Transport", "GD 9231L", VehicleType.VAN, new BigDecimal("700.00"));
     }
 
     private Vehicle createVehicleWithLowMaximumLoad() {

@@ -11,10 +11,10 @@ import com.mbugajski.logistics.courier.exception.CourierNotFoundException;
 import com.mbugajski.logistics.courier.repository.CourierRepository;
 import com.mbugajski.logistics.shipment.entity.Shipment;
 import com.mbugajski.logistics.shipment.entity.ShipmentStatus;
+import com.mbugajski.logistics.shipment.exception.ShipmentInvalidStatusException;
 import com.mbugajski.logistics.shipment.exception.ShipmentNotFoundException;
 import com.mbugajski.logistics.shipment.repository.ShipmentRepository;
 import com.mbugajski.logistics.vehicle.entity.Vehicle;
-import com.mbugajski.logistics.vehicle.exception.VehicleInvalidStateException;
 import com.mbugajski.logistics.vehicle.exception.VehicleNotFoundException;
 import com.mbugajski.logistics.vehicle.repository.VehicleRepository;
 import jakarta.transaction.Transactional;
@@ -117,10 +117,43 @@ public class ShipmentAssignmentService {
 
         if (foundAssignment.isPresent()) {
             ShipmentAssignment assignment = foundAssignment.get();
-            
+
             assignment.cancel();
             assignment.getCourier().markAsAvailable();
             assignment.getVehicle().markAsAvailable();
         }
+    }
+
+    @Transactional
+    public ShipmentAssignment reassign(Long shipmentId) {
+        Shipment shipmentFound = shipmentRepository.findById(shipmentId).orElseThrow(() -> new ShipmentNotFoundException(shipmentId));
+
+        if (shipmentFound.getStatus() != ShipmentStatus.READY_FOR_PICKUP) {
+            throw new ShipmentInvalidStatusException("Shipment status must be 'READY_FOR_PICKUP' to reassign.");
+        }
+
+        ShipmentAssignment activeAssignment = findActiveAssignment(shipmentId);
+
+        Courier courierFound = courierRepository.findFirstByAvailableTrue().orElseThrow(CourierNotFoundException::new);
+        Vehicle vehicleFound = vehicleRepository.findFirstByAvailableTrueAndMaximumLoadGreaterThanEqualOrderByMaximumLoadAsc(shipmentFound.getWeight()).orElseThrow(() -> new VehicleNotFoundException(shipmentFound.getWeight()));
+
+        BigDecimal shipmentWeight = shipmentFound.getWeight();
+        BigDecimal vehicleMaxLoad = vehicleFound.getMaximumLoad();
+
+        if (vehicleMaxLoad.compareTo(shipmentWeight) < 0) {
+            throw new AssignmentVehicleOutOfSpaceException("Shipment weight is too big.");
+        }
+
+        activeAssignment.getCourier().markAsAvailable();
+        activeAssignment.getVehicle().markAsAvailable();
+
+        courierFound.markAsBusy();
+        vehicleFound.markAsBusy();
+
+        ShipmentAssignment reassignment = new ShipmentAssignment(shipmentFound, courierFound, vehicleFound);
+        activeAssignment.reassign();
+        assignmentRepository.save(reassignment);
+
+        return reassignment;
     }
 }

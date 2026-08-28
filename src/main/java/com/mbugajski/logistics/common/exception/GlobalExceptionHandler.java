@@ -1,5 +1,6 @@
 package com.mbugajski.logistics.common.exception;
 
+import com.mbugajski.logistics.assignment.exception.ActiveAssignmentNotFoundException;
 import com.mbugajski.logistics.assignment.exception.AssignmentParameterInvalidStatus;
 import com.mbugajski.logistics.assignment.exception.AssignmentVehicleOutOfSpaceException;
 import com.mbugajski.logistics.courier.exception.CourierInvalidStateException;
@@ -173,6 +174,16 @@ public class GlobalExceptionHandler {
         return new ApiErrorResponse(
                 HttpStatus.CONFLICT.value(),
                 HttpStatus.CONFLICT.name(),
+                exception.getMessage(),
+                LocalDateTime.now());
+    }
+
+    @ExceptionHandler(ActiveAssignmentNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ApiErrorResponse handleActiveAssignmentNotFoundException(ActiveAssignmentNotFoundException exception) {
+        return new ApiErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                HttpStatus.NOT_FOUND.name(),
                 exception.getMessage(),
                 LocalDateTime.now());
     }

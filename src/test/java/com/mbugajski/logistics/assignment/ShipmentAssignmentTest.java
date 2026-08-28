@@ -201,6 +201,65 @@ public class ShipmentAssignmentTest {
         assertEquals(AssignmentStatus.CANCELLED, shipmentAssignment.getStatus());
     }
 
+    @Test
+    void shouldReassign() {
+        Shipment shipment = createShipment();
+        Courier courier = createCourier();
+        Vehicle vehicle = createVehicle();
+
+        ShipmentAssignment shipmentAssignment = new ShipmentAssignment(shipment, courier, vehicle);
+
+        shipmentAssignment.reassign();
+
+        assertEquals(AssignmentStatus.REASSIGNED, shipmentAssignment.getStatus());
+        assertNotNull(shipmentAssignment.getFinishedAt());
+    }
+
+    @Test
+    void shouldThrowWhenReassignCompletedAssignment() {
+        Shipment shipment = createShipment();
+        Courier courier = createCourier();
+        Vehicle vehicle = createVehicle();
+
+        ShipmentAssignment shipmentAssignment = new ShipmentAssignment(shipment, courier, vehicle);
+
+        shipmentAssignment.complete();
+
+        AssignmentInvalidStateException exception = assertThrows(AssignmentInvalidStateException.class, shipmentAssignment::reassign);
+
+        assertEquals("Status must be active to reassign.", exception.getMessage());
+    }
+
+    @Test
+    void shouldThrowWhenReassignReassignedAssignment() {
+        Shipment shipment = createShipment();
+        Courier courier = createCourier();
+        Vehicle vehicle = createVehicle();
+
+        ShipmentAssignment shipmentAssignment = new ShipmentAssignment(shipment, courier, vehicle);
+
+        shipmentAssignment.reassign();
+
+        AssignmentInvalidStateException exception = assertThrows(AssignmentInvalidStateException.class, shipmentAssignment::reassign);
+
+        assertEquals("Status must be active to reassign.", exception.getMessage());
+    }
+
+    @Test
+    void shouldThrowWhenReassignCanceledAssignment() {
+        Shipment shipment = createShipment();
+        Courier courier = createCourier();
+        Vehicle vehicle = createVehicle();
+
+        ShipmentAssignment shipmentAssignment = new ShipmentAssignment(shipment, courier, vehicle);
+
+        shipmentAssignment.cancel();
+
+        AssignmentInvalidStateException exception = assertThrows(AssignmentInvalidStateException.class, shipmentAssignment::reassign);
+
+        assertEquals("Status must be active to reassign.", exception.getMessage());
+    }
+
     private Shipment createShipment() {
         Address customerAddress = new Address("Adrianowa", "20", "14", "Kielce", "50-231", "Poland");
         Address deliveryAddress = new Address("Wysyłkowa", "13", "3", "Krakow", "60-123", "Poland");
