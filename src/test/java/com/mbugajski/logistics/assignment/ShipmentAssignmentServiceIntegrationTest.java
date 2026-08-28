@@ -341,6 +341,65 @@ public class ShipmentAssignmentServiceIntegrationTest {
         assertEquals(0L, shipmentAssignmentRepository.count());
     }
 
+    @Test
+    @Transactional
+    void shouldReassignShipment() {
+        Address customerAddress = createCustomerAddress();
+        addressRepository.saveAndFlush(customerAddress);
+
+        Customer customer = createCustomer(customerAddress);
+        customerRepository.saveAndFlush(customer);
+
+        Address deliveryAddress = createDeliveryAddress();
+        addressRepository.saveAndFlush(deliveryAddress);
+
+        Shipment shipment = createShipment(customerAddress, customer, deliveryAddress);
+        shipmentRepository.saveAndFlush(shipment);
+
+        Courier courier = createCourier();
+        courierRepository.saveAndFlush(courier);
+
+        Vehicle vehicle = createVehicle();
+        vehicleRepository.saveAndFlush(vehicle);
+
+        assertEquals(0L, shipmentAssignmentRepository.count());
+        assertTrue(courier.isAvailable());
+        assertTrue(vehicle.isAvailable());
+        assertEquals(ShipmentStatus.CREATED, shipment.getStatus());
+
+        ShipmentAssignment shipmentAssignment = shipmentAssignmentService.assign(shipment.getId(), courier.getId(), vehicle.getId());
+
+        Courier reassignCourier = new Courier("Reassign", "Courier", "+48 999 423 425");
+        courierRepository.saveAndFlush(reassignCourier);
+
+        Vehicle reassignVehicle = new Vehicle("Reassign", "Vehicle", "GD 8832D", VehicleType.VAN, new BigDecimal("100.00"));
+        vehicleRepository.saveAndFlush(reassignVehicle);
+
+        ShipmentAssignment reassignment = shipmentAssignmentService.reassign(shipment.getId());
+
+        entityManager.flush();
+        entityManager.clear();
+
+        Shipment reassignedShipment = shipmentRepository.findById(shipment.getId()).orElseThrow();
+        Courier oldCourier = courierRepository.findById(courier.getId()).orElseThrow();
+        Vehicle oldVehicle = vehicleRepository.findById(vehicle.getId()).orElseThrow();
+        Courier newCourier = courierRepository.findById(reassignCourier.getId()).orElseThrow();
+        Vehicle newVehicle = vehicleRepository.findById(reassignVehicle.getId()).orElseThrow();
+        ShipmentAssignment oldAssignment = shipmentAssignmentRepository.findById(shipmentAssignment.getId()).orElseThrow();
+        ShipmentAssignment newAssignment = shipmentAssignmentRepository.findById(reassignment.getId()).orElseThrow();
+
+        assertEquals(ShipmentStatus.READY_FOR_PICKUP, reassignedShipment.getStatus());
+        assertTrue(oldCourier.isAvailable());
+        assertTrue(oldVehicle.isAvailable());
+        assertFalse(newCourier.isAvailable());
+        assertFalse(newVehicle.isAvailable());
+        assertEquals(AssignmentStatus.REASSIGNED, oldAssignment.getStatus());
+        assertNotNull(oldAssignment.getFinishedAt());
+        assertEquals(AssignmentStatus.ACTIVE, newAssignment.getStatus());
+        assertNull(newAssignment.getFinishedAt());
+        assertEquals(2, shipmentAssignmentRepository.count());
+    }
+
 
     private Shipment createShipment(Address customerAddress, Customer customer, Address deliveryAddress) {
         return new Shipment(customer, customerAddress, deliveryAddress, new BigDecimal("5.00"));

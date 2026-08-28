@@ -38,7 +38,7 @@ public class ShipmentAssignment {
     private LocalDateTime assignedAt;
 
     private LocalDateTime finishedAt;
-    
+
     protected ShipmentAssignment() {
     }
 
@@ -81,5 +81,15 @@ public class ShipmentAssignment {
 
         status = AssignmentStatus.CANCELLED;
         finishedAt = LocalDateTime.now();
+    }
+
+    public void reassign() {
+        if (status != AssignmentStatus.ACTIVE) {
+            throw new AssignmentInvalidStateException("Status must be active to reassign.");
+        }
+
+        status = AssignmentStatus.REASSIGNED;
+        finishedAt = LocalDateTime.now();
+
     }
 }
