@@ -2,6 +2,7 @@ package com.mbugajski.logistics.assignment;
 
 import com.mbugajski.logistics.address.entity.Address;
 import com.mbugajski.logistics.address.repository.AddressRepository;
+import com.mbugajski.logistics.assignment.entity.AssignmentStatus;
 import com.mbugajski.logistics.assignment.entity.ShipmentAssignment;
 import com.mbugajski.logistics.assignment.repository.ShipmentAssignmentRepository;
 import com.mbugajski.logistics.courier.entity.Courier;
@@ -17,8 +18,11 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -75,7 +79,7 @@ public class ShipmentAssignmentRepositoryTest {
         ShipmentAssignment assignment = new ShipmentAssignment(shipment, courier, vehicle);
         assignmentRepository.saveAndFlush(assignment);
 
-        ShipmentAssignment shipmentAssignment = assignmentRepository.findByShipmentId(shipment.getId()).orElseThrow();
+        ShipmentAssignment shipmentAssignment = assignmentRepository.findByShipmentIdAndStatus(shipment.getId(), AssignmentStatus.ACTIVE).orElseThrow();
 
         assertEquals(shipment.getId(), shipmentAssignment.getShipment().getId());
         assertEquals(courier.getId(), shipmentAssignment.getCourier().getId());
@@ -84,9 +88,62 @@ public class ShipmentAssignmentRepositoryTest {
 
     @Test
     void shouldReturnEmptyWhenAssignmentDoesNotExist() {
-        Optional<ShipmentAssignment> foundAssignment = assignmentRepository.findByShipmentId(1L);
+        Optional<ShipmentAssignment> foundAssignment = assignmentRepository.findByShipmentIdAndStatus(1L, AssignmentStatus.ACTIVE);
 
         assertTrue(foundAssignment.isEmpty());
+    }
+
+    @Test
+    void shouldReturnOnlyAssignmentHistoryForGivenShipment() {
+        Address customerAddress = new Address("Klientowa", "20", "30", "Opole", "40-211", "Poland");
+        addressRepository.saveAndFlush(customerAddress);
+
+        Address pickupAddress = createPickupAddress();
+        addressRepository.saveAndFlush(pickupAddress);
+
+        Address deliveryAddress = createDeliveryAddress();
+        addressRepository.saveAndFlush(deliveryAddress);
+
+        Customer customer = createCustomer(customerAddress);
+        customerRepository.saveAndFlush(customer);
+
+        Shipment shipment1 = new Shipment(customer, pickupAddress, deliveryAddress, new BigDecimal("6.00"));
+        shipmentRepository.saveAndFlush(shipment1);
+
+        Shipment shipment2 = new Shipment(customer, pickupAddress, deliveryAddress, new BigDecimal("6.00"));
+        shipmentRepository.saveAndFlush(shipment2);
+
+        Courier courier1 = createCourier();
+        courierRepository.saveAndFlush(courier1);
+
+        Vehicle vehicle1 = createVehicle();
+        vehicleRepository.saveAndFlush(vehicle1);
+
+        ShipmentAssignment shipmentAssignment1 = new ShipmentAssignment(shipment1, courier1, vehicle1);
+        assignmentRepository.saveAndFlush(shipmentAssignment1);
+
+        ShipmentAssignment shipmentAssignment2 = new ShipmentAssignment(shipment1, courier1, vehicle1);
+        assignmentRepository.saveAndFlush(shipmentAssignment2);
+
+        ShipmentAssignment shipmentAssignment3 = new ShipmentAssignment(shipment2, courier1, vehicle1);
+        assignmentRepository.saveAndFlush(shipmentAssignment3);
+
+        ReflectionTestUtils.setField(shipmentAssignment1, "assignedAt", LocalDateTime.of(2026, 8, 31, 12, 0));
+        ReflectionTestUtils.setField(shipmentAssignment2, "assignedAt", LocalDateTime.of(2026, 8, 31, 10, 0));
+
+        entityManager.flush();
+        entityManager.clear();
+
+        List<ShipmentAssignment> shipmentAssignmentList = assignmentRepository.findAllByShipmentIdOrderByAssignedAtAsc(shipment1.getId());
+
+        assertEquals(2, shipmentAssignmentList.size());
+        assertEquals(shipment1.getId(), shipmentAssignmentList.getFirst().getShipment().getId());
+        assertEquals(shipment1.getId(), shipmentAssignmentList.get(1).getShipment().getId());
+        assertTrue(shipmentAssignmentList.stream().allMatch(assignment -> assignment.getShipment().getId().equals(shipment1.getId())));
+
+        assertEquals(shipmentAssignment2.getId(), shipmentAssignmentList.getFirst().getId());
+
+        assertEquals(shipmentAssignment1.getId(), shipmentAssignmentList.get(1).getId());
     }
 
     public Customer createCustomer(Address address) {

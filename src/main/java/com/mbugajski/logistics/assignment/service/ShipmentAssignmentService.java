@@ -21,6 +21,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -75,22 +76,6 @@ public class ShipmentAssignmentService {
         assignmentRepository.save(assignment);
 
         return assignment;
-    }
-
-    @Transactional
-    public void releaseResourcesForShipment(Long shipmentId) {
-        if (shipmentId == null || shipmentId <= 0) {
-            throw new IllegalArgumentException("Shipment ID cannot be null, zero or below.");
-        }
-
-        Optional<ShipmentAssignment> foundAssignment = assignmentRepository.findByShipmentId(shipmentId);
-
-        if (foundAssignment.isPresent()) {
-            ShipmentAssignment shipmentAssignment = foundAssignment.get();
-
-            shipmentAssignment.getCourier().markAsAvailable();
-            shipmentAssignment.getVehicle().markAsAvailable();
-        }
     }
 
     public ShipmentAssignment findActiveAssignment(Long shipmentId) {
@@ -155,5 +140,18 @@ public class ShipmentAssignmentService {
         assignmentRepository.save(reassignment);
 
         return reassignment;
+    }
+
+    public List<ShipmentAssignment> getAssignmentHistory(Long shipmentId) {
+        if (shipmentId == null || shipmentId <= 0) {
+            throw new IllegalArgumentException("Shipment ID cannot be null, zero or below.");
+        }
+
+
+        if (!shipmentRepository.existsById(shipmentId)) {
+            throw new ShipmentNotFoundException(shipmentId);
+        }
+
+        return assignmentRepository.findAllByShipmentIdOrderByAssignedAtAsc(shipmentId);
     }
 }

@@ -30,6 +30,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -285,51 +286,6 @@ public class ShipmentAssignmentServiceTest {
         verify(assignmentRepository, never()).save(any(ShipmentAssignment.class));
     }
 
-    @Test
-    void shouldReleaseResources() {
-        Shipment shipment = createShipment();
-        Courier courier = createCourier();
-        Vehicle vehicle = createVehicle();
-
-        courier.markAsBusy();
-        vehicle.markAsBusy();
-
-        ShipmentAssignment assignment = new ShipmentAssignment(shipment, courier, vehicle);
-
-        when(assignmentRepository.findByShipmentId(1L)).thenReturn(Optional.of(assignment));
-
-        shipmentAssignmentService.releaseResourcesForShipment(1L);
-
-        assertTrue(courier.isAvailable());
-        assertTrue(vehicle.isAvailable());
-    }
-
-    @Test
-    void shouldDoNothingWhenShipmentAssignmentNotFound() {
-        when(assignmentRepository.findByShipmentId(1L)).thenReturn(Optional.empty());
-
-        assertDoesNotThrow(() -> shipmentAssignmentService.releaseResourcesForShipment(1L));
-
-        verify(assignmentRepository).findByShipmentId(1L);
-    }
-
-    @Test
-    void shouldThrowWhenShipmentIdIsNull() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,() -> shipmentAssignmentService.releaseResourcesForShipment(null));
-
-        assertEquals("Shipment ID cannot be null, zero or below.", exception.getMessage());
-
-        verifyNoInteractions(assignmentRepository);
-    }
-
-    @Test
-    void shouldThrowWhenShipmentIdIsZeroOrBelow() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> shipmentAssignmentService.releaseResourcesForShipment(0L));
-
-        assertEquals("Shipment ID cannot be null, zero or below.", exception.getMessage());
-
-        verifyNoInteractions(assignmentRepository);
-    }
 
     @Test
     void shouldReturnActiveAssignment() {
@@ -608,6 +564,87 @@ public class ShipmentAssignmentServiceTest {
         verify(assignmentRepository, never()).save(any(ShipmentAssignment.class));
         verify(courierRepository).findFirstByAvailableTrue();
         verify(vehicleRepository).findFirstByAvailableTrueAndMaximumLoadGreaterThanEqualOrderByMaximumLoadAsc(shipment.getWeight());
+    }
+
+    @Test
+    void shouldReturnAssignmentHistory() {
+        Shipment shipment = createShipment();
+        Courier courier = createCourier();
+        Vehicle vehicle = createVehicle();
+
+        ShipmentAssignment assignment1 = new ShipmentAssignment(shipment, courier, vehicle);
+        ShipmentAssignment assignment2 = new ShipmentAssignment(shipment, courier, vehicle);
+        ShipmentAssignment assignment3 = new ShipmentAssignment(shipment, courier, vehicle);
+
+        List<ShipmentAssignment> assignmentList = List.of(assignment1, assignment2, assignment3);
+
+        when(shipmentRepository.existsById(1L)).thenReturn(true);
+        when(assignmentRepository.findAllByShipmentIdOrderByAssignedAtAsc(1L)).thenReturn(assignmentList);
+
+        List<ShipmentAssignment> result = shipmentAssignmentService.getAssignmentHistory(1L);
+
+        assertEquals(3, result.size());
+        assertSame(assignment1, result.getFirst());
+        assertSame(assignment2, result.get(1));
+        assertSame(assignment3, result.get(2));
+
+        verify(shipmentRepository).existsById(1L);
+        verify(assignmentRepository).findAllByShipmentIdOrderByAssignedAtAsc(1L);
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenShipmentHasNoAssignments() {
+        when(shipmentRepository.existsById(1L)).thenReturn(true);
+        when(assignmentRepository.findAllByShipmentIdOrderByAssignedAtAsc(1L)).thenReturn(List.of());
+
+        List<ShipmentAssignment> result = shipmentAssignmentService.getAssignmentHistory(1L);
+
+        assertTrue(result.isEmpty());
+
+        verify(shipmentRepository).existsById(1L);
+        verify(assignmentRepository).findAllByShipmentIdOrderByAssignedAtAsc(1L);
+    }
+
+    @Test
+    void shouldThrowWhenShipmentDoesNotExist() {
+        when(shipmentRepository.existsById(1L)).thenReturn(false);
+
+        ShipmentNotFoundException exception = assertThrows(ShipmentNotFoundException.class,() -> shipmentAssignmentService.getAssignmentHistory(1L));
+
+        assertEquals("Shipment with id 1 not found.", exception.getMessage());
+
+        verify(shipmentRepository).existsById(1L);
+        verifyNoInteractions(assignmentRepository);
+    }
+
+    @Test
+    void shouldThrowWhenShipmentIdIsNull() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,() -> shipmentAssignmentService.getAssignmentHistory(null));
+
+        assertEquals("Shipment ID cannot be null, zero or below.", exception.getMessage());
+
+        verifyNoInteractions(shipmentRepository);
+        verifyNoInteractions(assignmentRepository);
+    }
+
+    @Test
+    void shouldThrowWhenShipmentIdIsNegative() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,() -> shipmentAssignmentService.getAssignmentHistory(-1L));
+
+        assertEquals("Shipment ID cannot be null, zero or below.", exception.getMessage());
+
+        verifyNoInteractions(shipmentRepository);
+        verifyNoInteractions(assignmentRepository);
+    }
+
+    @Test
+    void shouldThrowWhenShipmentIdIsZero() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,() -> shipmentAssignmentService.getAssignmentHistory(0L));
+
+        assertEquals("Shipment ID cannot be null, zero or below.", exception.getMessage());
+
+        verifyNoInteractions(shipmentRepository);
+        verifyNoInteractions(assignmentRepository);
     }
 
     private Shipment createShipment() {
