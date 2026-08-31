@@ -25,7 +25,10 @@ The project includes request validation, domain-specific exceptions, centralized
 
 This is my first Spring Boot project and an important part of my backend development portfolio. I develop it incrementally as I learn new backend technologies and architectural concepts.
 
-The next major stages of the project will focus on assignment history retrieval, concurrency control, automatic shipment dispatching, and further logistics workflow automation.
+Assignment history can be retrieved through the API, allowing clients to inspect previous reassigned, completed, cancelled, and active assignments in chronological order.
+
+The next major stages of the project will focus on concurrency control, automatic shipment dispatching, and further logistics workflow automation.
+
 ## Current features
 
 ### Customer management
@@ -129,6 +132,10 @@ Supported status transitions:
 - Persist shipment, courier, vehicle, and assignment state changes transactionally
 - Roll back the entire operation if any part of the workflow fails
 - Return dedicated `ShipmentAssignmentResponse` DTOs
+- Retrieve complete assignment history for a shipment
+- Return assignment history chronologically by `assignedAt`
+- Return an empty history for shipments that have never been assigned
+- Preserve assignment status and lifecycle timestamps in history responses
 
 ### API and infrastructure
 
@@ -211,7 +218,7 @@ GET http://localhost:8080/api/shipments?status=CREATED&customerId=1&page=0&size=
 |---------|-------------------------------------------|------------------------------------------|---------------------------------------------------------------|
 | `POST`  | `/api/shipments/{shipmentId}/assignment` | Assign a courier and vehicle to shipment | `201 Created`, `400 Bad Request`, `404 Not Found`, `409 Conflict` |
 | `PATCH` | `/api/shipments/{shipmentId}/reassign`   | Reassign shipment to new resources       | `200 OK`, `404 Not Found`, `409 Conflict`                     |
-
+| `GET`   | `/api/shipments/{shipmentId}/assignment-history` | Retrieve shipment assignment history | `200 OK`, `404 Not Found` |
 
 ## Technologies
 
@@ -371,6 +378,12 @@ The project includes automated tests for multiple application layers:
 - assignment history preservation verification
 - courier and vehicle resource switching verification
 - suitable vehicle selection based on shipment weight
+- shipment assignment history service tests
+- shipment assignment history REST controller tests
+- empty assignment history behavior tests
+- shipment assignment history persistence integration tests
+- repository filtering by shipment ID
+- assignment history ordering by `assignedAt`
 
 Tests can be executed locally with Maven Wrapper:
 
@@ -435,6 +448,7 @@ http://localhost:8080/api/couriers
 http://localhost:8080/api/vehicles
 http://localhost:8080/api/shipments/{shipmentId}/assignment
 http://localhost:8080/api/shipments/{shipmentId}/reassign
+http://localhost:8080/api/shipments/{shipmentId}/assignment-history
 ```
 
 ## Example requests
@@ -644,12 +658,44 @@ PATCH http://localhost:8080/api/shipments/1/reassign
   "assignedAt": "2026-08-28T16:15:00",
   "finishedAt": null
 }
+
 ```
 ### Reassignment behavior
 
 Reassignment is available only while the shipment is in the `READY_FOR_PICKUP` state.
 
 The previous assignment is marked as `REASSIGNED` and its resources are released. The system then selects an available courier and the smallest available vehicle with sufficient capacity and creates a new `ACTIVE` assignment.
+
+### Get shipment assignment history
+
+```http
+GET http://localhost:8080/api/shipments/1/assignment-history
+```
+
+### Example assignment history response
+
+```json
+[
+  {
+    "assignmentId": 1,
+    "shipmentId": 1,
+    "courierId": 1,
+    "vehicleId": 1,
+    "status": "REASSIGNED",
+    "assignedAt": "2026-08-31T10:00:00",
+    "finishedAt": "2026-08-31T12:00:00"
+  },
+  {
+    "assignmentId": 2,
+    "shipmentId": 1,
+    "courierId": 2,
+    "vehicleId": 2,
+    "status": "ACTIVE",
+    "assignedAt": "2026-08-31T12:00:00",
+    "finishedAt": null
+  }
+]
+```
 
 ### Update vehicle status
 
@@ -695,7 +741,7 @@ Content-Type: application/json
 - [ ] Create a simple frontend for interacting with the system
 - [x] Add shipment reassignment
 - [x] Preserve assignment history during reassignment
-- [ ] Add shipment assignment history retrieval endpoint
+- [x] Add shipment assignment history retrieval endpoint
 - [x] Release courier and vehicle after delivery or cancellation
 - [x] Add pagination and filtering for large datasets
 - [ ] Handle concurrent shipment assignments
