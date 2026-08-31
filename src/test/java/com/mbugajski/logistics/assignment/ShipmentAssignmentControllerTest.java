@@ -35,12 +35,12 @@ import tools.jackson.databind.json.JsonMapper;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
 import org.springframework.http.HttpStatus;
 
 import java.math.BigDecimal;
-
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import java.util.List;
 
 @WebMvcTest(ShipmentAssignmentController.class)
 @Import(GlobalExceptionHandler.class)
@@ -423,6 +423,83 @@ public class ShipmentAssignmentControllerTest {
                 .andExpect(jsonPath("$.timestamp").exists());
 
         verify(shipmentAssignmentService).reassign(1L);
+    }
+
+    @Test
+    void shouldReturnAssignmentHistory() throws Exception {
+        Shipment shipment = createShipment();
+        Courier courier = createCourier();
+        Vehicle vehicle = createVehicle();
+
+        ShipmentAssignment assignment1 = new ShipmentAssignment(shipment, courier, vehicle);
+        assignment1.reassign();
+
+        ShipmentAssignment assignment2 = new ShipmentAssignment(shipment, courier, vehicle);
+        assignment2.reassign();
+
+        ShipmentAssignment assignment3 = new ShipmentAssignment(shipment, courier, vehicle);
+
+        ReflectionTestUtils.setField(assignment1, "id", 1L);
+        ReflectionTestUtils.setField(assignment2, "id", 2L);
+        ReflectionTestUtils.setField(assignment3, "id", 3L);
+        ReflectionTestUtils.setField(shipment, "id", 1L);
+        ReflectionTestUtils.setField(courier, "id", 1L);
+        ReflectionTestUtils.setField(vehicle, "id", 1L);
+
+        List<ShipmentAssignment> shipmentAssignmentList = List.of(assignment1, assignment2, assignment3);
+
+        when(shipmentAssignmentService.getAssignmentHistory(1L)).thenReturn(shipmentAssignmentList);
+
+        mockMvc.perform(get("/api/shipments/1/assignment-history"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].assignmentId").value(1L))
+                .andExpect(jsonPath("$[0].shipmentId").value(1L))
+                .andExpect(jsonPath("$[0].courierId").value(1L))
+                .andExpect(jsonPath("$[0].vehicleId").value(1L))
+                .andExpect(jsonPath("$[0].status").value("REASSIGNED"))
+                .andExpect(jsonPath("$[0].assignedAt").exists())
+                .andExpect(jsonPath("$[0].finishedAt").exists())
+                .andExpect(jsonPath("$[1].assignmentId").value(2L))
+                .andExpect(jsonPath("$[1].shipmentId").value(1L))
+                .andExpect(jsonPath("$[1].courierId").value(1L))
+                .andExpect(jsonPath("$[1].vehicleId").value(1L))
+                .andExpect(jsonPath("$[1].status").value("REASSIGNED"))
+                .andExpect(jsonPath("$[1].assignedAt").exists())
+                .andExpect(jsonPath("$[1].finishedAt").exists())
+                .andExpect(jsonPath("$[2].assignmentId").value(3L))
+                .andExpect(jsonPath("$[2].shipmentId").value(1L))
+                .andExpect(jsonPath("$[2].courierId").value(1L))
+                .andExpect(jsonPath("$[2].vehicleId").value(1L))
+                .andExpect(jsonPath("$[2].status").value("ACTIVE"))
+                .andExpect(jsonPath("$[2].assignedAt").exists())
+                .andExpect(jsonPath("$[2].finishedAt").isEmpty());
+
+        verify(shipmentAssignmentService).getAssignmentHistory(1L);
+    }
+
+    @Test
+    void shouldReturnEmptyAssignmentHistoryList() throws Exception {
+        when(shipmentAssignmentService.getAssignmentHistory(1L)).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/shipments/1/assignment-history"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+
+        verify(shipmentAssignmentService).getAssignmentHistory(1L);
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenGettingAssignmentHistoryForMissingShipment() throws Exception {
+        when(shipmentAssignmentService.getAssignmentHistory(1L)).thenThrow(new ShipmentNotFoundException(1L));
+
+        mockMvc.perform(get("/api/shipments/1/assignment-history"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(HttpStatus.NOT_FOUND.value()))
+                .andExpect(jsonPath("$.error").value(HttpStatus.NOT_FOUND.name()))
+                .andExpect(jsonPath("$.message").value("Shipment with id 1 not found."))
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        verify(shipmentAssignmentService).getAssignmentHistory(1L);
     }
 
     private Shipment createShipment() {

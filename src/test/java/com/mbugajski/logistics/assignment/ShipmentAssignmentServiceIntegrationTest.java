@@ -28,6 +28,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -398,6 +399,49 @@ public class ShipmentAssignmentServiceIntegrationTest {
         assertEquals(AssignmentStatus.ACTIVE, newAssignment.getStatus());
         assertNull(newAssignment.getFinishedAt());
         assertEquals(2, shipmentAssignmentRepository.count());
+    }
+
+    @Test
+    void shouldReturnAssignmentHistory() {
+        Address customerAddress = createCustomerAddress();
+        addressRepository.saveAndFlush(customerAddress);
+
+        Customer customer = createCustomer(customerAddress);
+        customerRepository.saveAndFlush(customer);
+
+        Address deliveryAddress = createDeliveryAddress();
+        addressRepository.saveAndFlush(deliveryAddress);
+
+        Shipment shipment = createShipment(customerAddress, customer, deliveryAddress);
+        shipmentRepository.saveAndFlush(shipment);
+
+        Courier courier = createCourier();
+        courierRepository.saveAndFlush(courier);
+
+        Vehicle vehicle = createVehicle();
+        vehicleRepository.saveAndFlush(vehicle);
+
+        ShipmentAssignment shipmentAssignment = shipmentAssignmentService.assign(shipment.getId(), courier.getId(), vehicle.getId());
+
+        Courier reassignCourier = new Courier("Reassign", "Courier", "+48 999 423 425");
+        courierRepository.saveAndFlush(reassignCourier);
+
+        Vehicle reassignVehicle = new Vehicle("Reassign", "Vehicle", "GD 8832D", VehicleType.VAN, new BigDecimal("100.00"));
+        vehicleRepository.saveAndFlush(reassignVehicle);
+
+        ShipmentAssignment reassignment = shipmentAssignmentService.reassign(shipment.getId());
+
+        entityManager.flush();
+        entityManager.clear();
+
+        List<ShipmentAssignment> shipmentAssignmentList = shipmentAssignmentService.getAssignmentHistory(shipment.getId());
+
+        assertEquals(shipmentAssignment.getId(), shipmentAssignmentList.getFirst().getId());
+        assertEquals(reassignment.getId(), shipmentAssignmentList.get(1).getId());
+        assertEquals(AssignmentStatus.REASSIGNED, shipmentAssignmentList.getFirst().getStatus());
+        assertEquals(AssignmentStatus.ACTIVE, shipmentAssignmentList.get(1).getStatus());
+        assertNotNull(shipmentAssignmentList.getFirst().getFinishedAt());
+        assertNull(shipmentAssignmentList.get(1).getFinishedAt());
     }
 
 

@@ -5,9 +5,12 @@ import com.mbugajski.logistics.assignment.dto.response.ShipmentAssignmentRespons
 import com.mbugajski.logistics.assignment.entity.ShipmentAssignment;
 import com.mbugajski.logistics.assignment.mapper.ShipmentAssignmentMapper;
 import com.mbugajski.logistics.assignment.service.ShipmentAssignmentService;
+import com.mbugajski.logistics.vehicle.mapper.VehicleMapper;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/shipments")
@@ -32,5 +35,15 @@ public class ShipmentAssignmentController {
         ShipmentAssignment shipmentAssignment = shipmentAssignmentService.reassign(shipmentId);
 
         return ShipmentAssignmentMapper.toResponse(shipmentAssignment);
+    }
+
+    @GetMapping("/{shipmentId}/assignment-history")
+    public List<ShipmentAssignmentResponse> getAssignmentHistory(@PathVariable Long shipmentId) {
+        List<ShipmentAssignment> shipmentAssignmentList = shipmentAssignmentService.getAssignmentHistory(shipmentId);
+
+        return shipmentAssignmentList
+                .stream()
+                .map(ShipmentAssignmentMapper::toResponse)
+                .toList();
     }
 }
